@@ -1841,9 +1841,10 @@ void NeuralNetPrintTrainningInfo(TPNeuralNet PNeuralNet)
 			PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount/ 1.00,
 			PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount/ 1.00,
 			PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount / 1.00);
-	LOGINFO("forward ticks:%ld backward ticks:%ld ",
+	LOGINFO("forward ticks:%d backward ticks:%d optimTime ticks:%d",
 			PNeuralNet->fwTime,
-			PNeuralNet->bwTime);
+			PNeuralNet->bwTime,
+			PNeuralNet->optimTime);
 }
 
 void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
@@ -1993,7 +1994,7 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	free(PNeuralNet->trainning.pResponseResults);
 	PNeuralNet->trainning.responseCount = 0;
 	PNeuralNet->trainning.pResponseResults = NULL;
-	PNeuralNet->optiTime = GetTimestamp() - starTick;
+	PNeuralNet->optimTime = GetTimestamp() - starTick;
 }
 
 /// @brief ///////////////////////////////////////////////////////////////////////
