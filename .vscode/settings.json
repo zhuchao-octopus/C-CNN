@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "ann-cnn.h": "c",
+        "stdlib.h": "c",
+        "cstdio": "c",
+        "cstdint": "c",
+        "cmath": "c",
+        "*.tcc": "c",
+        "string.h": "c"
+    }
+}
