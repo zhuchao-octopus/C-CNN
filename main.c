@@ -23,8 +23,8 @@ int main()
 
 	printf("\nplease select a menu item to continue:");
 	int input_int = 3;
-	//scanf("%d", &input_int);
-
+	// scanf("%d", &input_int);
+	printf("\n");
 	switch (input_int)
 	{
 	case 1:
@@ -34,7 +34,7 @@ int main()
 	case 0:
 		break;
 	default:
-	    NeuralNet_Start();
+		NeuralNet_Start();
 		break;
 	}
 

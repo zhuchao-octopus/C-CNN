@@ -1033,7 +1033,7 @@ void FullyConnLayerForward(TPFullyConnLayer PFullyConnLayer)
 	{
 		TPVolume filter = PFullyConnLayer->filters->volumes[out_d];
 		sum = 0.00;
-		// uint16_t inputs = filter->_w * filter->_h * filter->_depth;
+
 		uint16_t inputPoints = inVolu->_w * inVolu->_h * inVolu->_depth;
 
 		for (uint16_t ip = 0; ip < inputPoints; ip++)
@@ -1049,6 +1049,9 @@ void FullyConnLayerForward(TPFullyConnLayer PFullyConnLayer)
 	}
 }
 
+/// @brief /////////////////////////////////////////////////////////////////////////////////////////////////
+/// @param PFullyConnLayer 
+/// y = wx+b
 void FullyConnLayerBackward(TPFullyConnLayer PFullyConnLayer)
 {
 	float32_t grad_value = 0.00;
@@ -1246,18 +1249,17 @@ float32_t SoftmaxLayerBackwardLoss(TPSoftmaxLayer PSoftmaxLayer)
 		return 0;
 }
 
-float32_t SoftmaxLayerBackwardOutput(TPSoftmaxLayer PSoftmaxLayer, TTensor Tensor)
-{
-	return 0.00;
-}
-
 void SoftmaxLayerFree(TPSoftmaxLayer PSoftmaxLayer)
 {
 	FreeVolume(PSoftmaxLayer->layer.in_v);
 	FreeVolume(PSoftmaxLayer->layer.out_v);
 	free(PSoftmaxLayer);
 }
-////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////
+/// @brief /////////////////////////////////////////////////////////////////////////
+/// @param PNeuralNet 
+/// @param PLayerOption 
 void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 {
 	if (PNeuralNet == NULL)
@@ -1873,8 +1875,15 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	PNeuralNet->fwTime = GetTimestamp() - starTick;
 	// PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 2, 1);
 	// PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 2, 0);
-	// PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 2, 3);
-	// PNeuralNet->print("EXP", ((TPSoftmaxLayer)PNeuralNet->layers[PNeuralNet->depth - 1])->exp);
+
+	PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 1, 1);
+	PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 1, 0);
+	PNeuralNet->print("EXP", ((TPSoftmaxLayer)PNeuralNet->layers[PNeuralNet->depth - 1])->exp);
+    ///////////////////////////////////////////////////////////////////////////////////////
+	//debug 
+	PNeuralNet->trainning.trainningGoing = false;
+	return;
+
 	starTick = GetTimestamp();
 	PNeuralNet->backward(PNeuralNet);
 	PNeuralNet->bwTime = GetTimestamp() - starTick;

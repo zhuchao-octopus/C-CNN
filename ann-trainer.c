@@ -64,7 +64,7 @@ void NeuralNet_Start()
 				//		prediction.labelIndex, prediction.likeliHood, PNeuralNetCNN->trainning.labelIndex, PNeuralNetCNN->trainning.cost_loss);
 				PNeuralNetCNN->printTrainningInfo(PNeuralNetCNN);
 
-				printf("\033[4A");
+				//printf("\033[4A");
 			}
 		}
 
@@ -79,7 +79,7 @@ void NeuralNet_Start()
 		}
 
 		// if (PNeuralNetCNN->trainning.sampleCount >= 100)
-		//	break;
+		//break;
 	}
 }
 
