@@ -445,6 +445,10 @@ void InputLayerFree(TPInputLayer PInputLayer)
 	FreeVolume(PInputLayer->layer.in_v);
 	FreeVolume(PInputLayer->layer.out_v);
 }
+void  MatrixMultip(TPTensor PTenser1,TPTensor PTenser2,TPTensor out) 
+{
+
+}
 /////////////////////////////////////////////////////////////////////////////
 /// @brief //////////////////////////////////////////////////////////////////
 /// @param PConvLayer
@@ -577,7 +581,9 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
 		}
 	}
 }
-
+/// @brief ////////////////////////////////////////////////////////////////////////////////
+/// @param PConvLayer 
+/// y = wx+b 求关于in w b的偏导数
 void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 {
 	// float32_t sum = 0.00;
@@ -755,6 +761,8 @@ void ReluLayerForward(TPReluLayer PReluLayer)
 			PReluLayer->layer.out_v->weight->buffer[out_l] = PReluLayer->layer.in_v->weight->buffer[out_l];
 	}
 }
+/// @brief //////////////////////////////////////////////////////////////////////////////////////
+/// @param PReluLayer /
 
 void ReluLayerBackward(TPReluLayer PReluLayer)
 {
@@ -907,7 +915,9 @@ void PoolLayerForward(TPPoolLayer PPoolLayer)
 		}
 	}
 }
-
+/// @brief ////////////////////////////////////////////////////////////////////////////////////
+/// @param PPoolLayer /
+/// 
 void PoolLayerBackward(TPPoolLayer PPoolLayer)
 {
 	float32_t grad_value = 0.00;
@@ -1051,7 +1061,7 @@ void FullyConnLayerForward(TPFullyConnLayer PFullyConnLayer)
 
 /// @brief /////////////////////////////////////////////////////////////////////////////////////////////////
 /// @param PFullyConnLayer 
-/// y = wx+b
+/// y = wx+b 求关于in w b的偏导数
 void FullyConnLayerBackward(TPFullyConnLayer PFullyConnLayer)
 {
 	float32_t grad_value = 0.00;
