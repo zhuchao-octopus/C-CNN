@@ -1,9 +1,11 @@
+/////////////////////////////////////////////////////////////////////////////////////////////
 /*
  * trainer-cnn.c
  *
  *  Created on: 2023��4��22��
- *      Author: lenovo
+ *  Author: M
  */
+ /////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef PLATFORM_STM32
 #include "usart.h"
@@ -12,7 +14,7 @@
 
 #include "string.h"
 #include "ann-cnn.h"
-#include "dataset_cifar.h"
+#include "ann-dataset.h"
 
 ///////////////////////////////////////////////////////////////////
 
@@ -25,71 +27,110 @@ TPNeuralNet PNeuralNetCNN = NULL;
 // TLayerOption SoftMaxOption = {Layer_Type_SoftMax, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 TLayerOption LayerOption = {Layer_Type_None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-void NeuralNet_Start()
+void NeuralNetStartTrainning()
 {
-	TPPicture pInputImage = NULL;
+	TPPicture pTrainningImage = NULL;
 	TPrediction prediction;
-	// float32_t trainingAccuracy = 0;
+	bool_t hide_cursor = false;
+	time_t elapsed_time_ms = 0;
 	if (PNeuralNetCNN == NULL || PNeuralNetCNN->backward == NULL || PNeuralNetCNN->forward == NULL || PNeuralNetCNN->init == NULL || PNeuralNetCNN->train == NULL || PNeuralNetCNN->depth < 5)
 	{
 		LOGINFO("Neural Net CNN is not init!!!\n");
 		return;
 	}
-	PNeuralNetCNN->trainning.datasetIndex = 0;
-	// PNeuralNetCNN->trainning.trainingAccuracy = 0;
+	elapsed_time_ms = GetTimestamp();
 	PNeuralNetCNN->trainning.trainningGoing = true;
 	while (PNeuralNetCNN->trainning.trainningGoing)
 	{
-		pInputImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.datasetIndex, PNeuralNetCNN->trainningParam.data_type);
-		if (pInputImage != NULL)
+		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainningParam.data_type);
+		
+		if (pTrainningImage != NULL)
 		{
-			PNeuralNetCNN->trainning.labelIndex = pInputImage->labelIndex;
+			PNeuralNetCNN->trainning.labelIndex = pTrainningImage->labelIndex;
 			PNeuralNetCNN->trainning.sampleCount++;
-			// LOG("\n/////////////////////////////////////////////////////////////////////////////////////////////////////\n");
-			// LOG("trainning.sampleCount=%d trainning.imageIndex=%d image_label=%d\n", PNeuralNetCNN->trainning.sampleCount, PNeuralNetCNN->trainning.datasetIndex, PNeuralNetCNN->trainning.labelIndex);
-
-			PNeuralNetCNN->train(PNeuralNetCNN, pInputImage->volume);
-			// PNeuralNetCNN->getPredictions(PNeuralNetCNN);
+			PNeuralNetCNN->train(PNeuralNetCNN, pTrainningImage->volume);
 			PNeuralNetCNN->getMaxPrediction(PNeuralNetCNN, &prediction);
-			if (prediction.labelIndex == pInputImage->labelIndex)
+			if (prediction.labelIndex == pTrainningImage->labelIndex)
 			{
-
 				PNeuralNetCNN->trainning.trainingAccuracy++;
 			}
+			PNeuralNetCNN->totalTime = GetTimestamp() - elapsed_time_ms;
 
-			// if (PNeuralNetCNN->trainning.batchCount % PNeuralNetCNN->trainningParam.batch_size == 0)
+			NeuralNetStartPrediction();
+			PNeuralNetCNN->printTrainningInfo(PNeuralNetCNN);
+
+			if (!PNeuralNetCNN->trainning.one_by_one && !PNeuralNetCNN->trainning.batch_by_batch)
 			{
-				LOG("\n");
-				//LOGINFO("MaxPredictionValue=%d MaxPredictionLikehook=%f ExpectedValue=%d ExpectedProbability=1,Loss=%f",
-				//		prediction.labelIndex, prediction.likeliHood, PNeuralNetCNN->trainning.labelIndex, PNeuralNetCNN->trainning.cost_loss);
-				PNeuralNetCNN->printTrainningInfo(PNeuralNetCNN);
-
-				//printf("\033[4A");
+				#ifdef PLATFORM_WINDOWS
+				printf("\033[3A");
+				if (!hide_cursor)
+				{
+					CONSOLE_CURSOR_INFO CursorInfo = {1, 0};
+					SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &CursorInfo);
+					hide_cursor = true;
+				}
+				#endif
 			}
-		}
 
-		if (PNeuralNetCNN->trainning.datasetIndex >= PNeuralNetCNN->trainning.datasetTotal)
-		{
-			PNeuralNetCNN->trainning.datasetIndex = 0;
-			PNeuralNetCNN->trainning.epochCount++;
+			if (PNeuralNetCNN->trainning.one_by_one)
+			{
+				PNeuralNetCNN->trainning.trainningGoing = false;
+			}
+			else if (PNeuralNetCNN->trainning.batch_by_batch && (PNeuralNetCNN->trainning.batchCount % PNeuralNetCNN->trainningParam.batch_size == 0))
+			{
+				PNeuralNetCNN->trainning.trainningGoing = false;
+			}
 		}
 		else
 		{
-			PNeuralNetCNN->trainning.datasetIndex++;
+			LOGINFO("pTrainningImage NULL trinning_dataset_index=%d", PNeuralNetCNN->trainning.trinning_dataset_index);
 		}
 
-		// if (PNeuralNetCNN->trainning.sampleCount >= 100)
-		//break;
-	}
+		PNeuralNetCNN->trainning.trinning_dataset_index++;
+
+		if (PNeuralNetCNN->trainning.trainingSaving && PNeuralNetCNN->trainning.sampleCount % CIFAR10_TRAINNING_IMAGE_BATCH_COUNT == 0)
+		{
+			PNeuralNetCNN->save(PNeuralNetCNN);
+		}
+		if (PNeuralNetCNN->trainning.trinning_dataset_index >= PNeuralNetCNN->trainning.datasetTotal)
+		{
+			PNeuralNetCNN->trainning.trinning_dataset_index = 0;
+			PNeuralNetCNN->trainning.epochCount++;
+		}
+	}	
 }
 
+void NeuralNetStartPrediction(void)
+{
+	TPPicture pTestImage = NULL;
+	TPrediction prediction;
+	if (PNeuralNetCNN == NULL || PNeuralNetCNN->backward == NULL || PNeuralNetCNN->forward == NULL || PNeuralNetCNN->init == NULL || PNeuralNetCNN->train == NULL || PNeuralNetCNN->depth < 5)
+	{
+		LOGINFO("Neural Net CNN is not init!!!\n");
+		return;
+	}
+	pTestImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.testing_dataset_index, PNeuralNetCNN->trainningParam.data_type);
+	if (pTestImage != NULL)
+	{
+		PNeuralNetCNN->predict(PNeuralNetCNN, pTestImage->volume);
+		PNeuralNetCNN->getMaxPrediction(PNeuralNetCNN, &prediction);
+		if (prediction.labelIndex == pTestImage->labelIndex)
+		{
+			PNeuralNetCNN->trainning.testingAccuracy++;
+		}
+	}
+	PNeuralNetCNN->trainning.testing_dataset_index++;
+	if (PNeuralNetCNN->trainning.testing_dataset_index >= CIFAR10_TESTING_IMAGE_COUNT)
+	{
+		PNeuralNetCNN->trainning.testing_dataset_index = 0;
+	}
+}
 /// @brief ///////////////////////////////////////////////////////
 /// @param
-void InitNeuralNet_CNN(void)
+void NeuralNetCNNInit(void)
 {
 	TPLayer pNetLayer;
-
-	PNeuralNetCNN = CreateNeuralNetCNN();
+	PNeuralNetCNN = NeuralNetCNNCreate();
 
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_Input;
@@ -270,32 +311,37 @@ void InitNeuralNet_CNN(void)
 	// LOG("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d\n", PNeuralNetCNN->depth - 1, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
 	// pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
 	// LOG("\n////////////////////////////////////////////////////////////////////////////////////\n");
+	NeuralNetCNNPrintLayerInfor();
+}
+
+void NeuralNetCNNPrintLayerInfor(void)
+{
+	TPLayer pNetLayer;
 	for (uint16_t out_d = 0; out_d < PNeuralNetCNN->depth; out_d++)
 	{
 		pNetLayer = PNeuralNetCNN->layers[out_d];
 		if (pNetLayer->LayerType == Layer_Type_Convolution)
 		{
-			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d fileterNumber=%d size=%dx%dx%d %s", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
-					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, ((TPConvLayer)pNetLayer)->filters->filterNumber,
-					((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth, PNeuralNetCNN->getName(pNetLayer->LayerType));
+			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %-15s fileterNumber=%d size=%dx%dx%d", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNetCNN->getName(pNetLayer->LayerType), ((TPConvLayer)pNetLayer)->filters->filterNumber,
+					((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth);
 		}
 		else if (pNetLayer->LayerType == Layer_Type_FullyConnection)
 		{
-			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d fileterNumber=%d size=%dx%dx%d %s", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
-					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, ((TPConvLayer)pNetLayer)->filters->filterNumber,
-					((TPFullyConnLayer)pNetLayer)->filters->_w, ((TPFullyConnLayer)pNetLayer)->filters->_h, ((TPFullyConnLayer)pNetLayer)->filters->_depth, PNeuralNetCNN->getName(pNetLayer->LayerType));
+			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %-15s fileterNumber=%d size=%dx%dx%d", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNetCNN->getName(pNetLayer->LayerType), ((TPConvLayer)pNetLayer)->filters->filterNumber,
+					((TPFullyConnLayer)pNetLayer)->filters->_w, ((TPFullyConnLayer)pNetLayer)->filters->_h, ((TPFullyConnLayer)pNetLayer)->filters->_depth);
 		}
 		else
 		{
-			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d %s", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %s", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
 					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNetCNN->getName(pNetLayer->LayerType));
 		}
 	}
 }
-
 ////////////////////////////////////////////////////////////////////
 /// @brief /////////////////////////////////////////////////////////
-void InitLeaningParameter(void)
+void NeuralNetCNNInitLeaningParameter(void)
 {
 	if (PNeuralNetCNN == NULL)
 	{
@@ -303,7 +349,7 @@ void InitLeaningParameter(void)
 		return;
 	}
 	PNeuralNetCNN->trainningParam.data_type = Cifar10;
-	PNeuralNetCNN->trainningParam.optimize_method = Optm_Adam;
+	PNeuralNetCNN->trainningParam.optimize_method = Optm_Adagrad;
 	PNeuralNetCNN->trainningParam.batch_size = 10;
 	PNeuralNetCNN->trainningParam.l1_decay = 0;
 	PNeuralNetCNN->trainningParam.l2_decay = 0.0001;
@@ -313,23 +359,31 @@ void InitLeaningParameter(void)
 	PNeuralNetCNN->trainningParam.learning_rate = 0.005;
 	PNeuralNetCNN->trainningParam.momentum = 0.9;
 	PNeuralNetCNN->trainningParam.bias = 0.1;
-	//
-	PNeuralNetCNN->trainning.datasetIndex = 0;
-	PNeuralNetCNN->trainning.datasetTotal = 10000;
+	////////////////////////////////////////////////////
+	PNeuralNetCNN->trainning.trinning_dataset_index = 0;
+	PNeuralNetCNN->trainning.testing_dataset_index = 0;
+	PNeuralNetCNN->trainning.datasetTotal = 50000;
 	PNeuralNetCNN->trainning.sampleCount = 0;
 	PNeuralNetCNN->trainning.epochCount = 0;
 	PNeuralNetCNN->trainning.batchCount = 0;
+	PNeuralNetCNN->trainning.iterations = 0;
 	PNeuralNetCNN->trainning.sum_cost_loss = 0;
 	PNeuralNetCNN->trainning.l1_decay_loss = 0;
 	PNeuralNetCNN->trainning.l2_decay_loss = 0;
 	PNeuralNetCNN->trainning.pResponseResults = NULL;
-	PNeuralNetCNN->trainning.pPredictions = NULL;
 	PNeuralNetCNN->trainning.responseCount = 0;
+	PNeuralNetCNN->trainning.pPredictions = NULL;
 	PNeuralNetCNN->trainning.predictionCount = 0;
-	PNeuralNetCNN->trainning.gsumCount = 0;
-	PNeuralNetCNN->trainning.gsum1 = NULL;
-	PNeuralNetCNN->trainning.gsum2 = NULL;
-
+	PNeuralNetCNN->trainning.grads_sum_count = 0;
+	PNeuralNetCNN->trainning.grads_sum1 = NULL;
+	PNeuralNetCNN->trainning.grads_sum2 = NULL;
+	PNeuralNetCNN->trainning.trainingAccuracy = 0;
+	PNeuralNetCNN->trainning.testingAccuracy = 0;
+	PNeuralNetCNN->trainning.underflow = false;
+	PNeuralNetCNN->trainning.overflow = false;
+	PNeuralNetCNN->trainning.batch_by_batch = false;
+	PNeuralNetCNN->trainning.one_by_one = false;
+	PNeuralNetCNN->totalTime = 0;
 	LOG("[LeaningParameters]:data_type:%s optimize_method=%d batch_size=%d l1_decay=%f l2_decay=%f beta1=%f beta2=%f eps=%f learning_rate=%f,momentum=%f bias=%f\n",
 		GetDataSetName(PNeuralNetCNN->trainningParam.data_type),
 		PNeuralNetCNN->trainningParam.optimize_method,
@@ -344,7 +398,7 @@ void InitLeaningParameter(void)
 		PNeuralNetCNN->trainningParam.bias);
 }
 
-void PrintNetInformation(void)
+void NeuralNetCNNPrintNetInformation(void)
 {
 	uint16_t inputVolCount = 0;
 	uint16_t outputVolCount = 0;

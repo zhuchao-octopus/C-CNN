@@ -1,47 +1,137 @@
-﻿// main.cpp: 定义应用程序的入口点。
-//
-
+﻿/////////////////////////////////////////////////////////////////////////////////////////////
+// main.cpp: 定义应用程序的入口点。
+// test
+/////////////////////////////////////////////////////////////////////////////////////////////
 #include "ann-cnn.h"
+extern TPNeuralNet PNeuralNetCNN;
+void showBanner(void);
+/////////////////////////////////////////////////////////////////////////////////////////////
 
-#if 1
 int main()
 {
-	printf("\nHellow VS Code!\n");
-
+	char str[32] = "";
+	int cmd = 0;
+	int layer = 0;
+	showBanner();
 #if defined(__STDC_VERSION__)
 	printf("__STDC_VERSION__ Version %ld\n", __STDC_VERSION__);
 #endif
 	printf("////////////////////////////////////////////////////////////\n");
 	LOGINFO("InitNeuralNet_CNN...");
-	InitNeuralNet_CNN();
+	NeuralNetCNNInit();
 	LOGINFO("InitLeaningParameter...");
-	InitLeaningParameter();
-	PrintNetInformation();
-	printf("\n");
-	printf("0: exit");
-	printf("\t\t\t1: start trainning\n");
+	NeuralNetCNNInitLeaningParameter();
+	NeuralNetCNNPrintNetInformation();
 
-	printf("\nplease select a menu item to continue:");
-	int input_int = 3;
-	// scanf("%d", &input_int);
-	printf("\n");
-	switch (input_int)
+	while (true)
 	{
-	case 1:
-		LOGINFO("NeuralNet_Start...");
-		NeuralNet_Start();
-		break;
-	case 0:
-		break;
-	default:
-		NeuralNet_Start();
-		break;
-	}
+		printf("\n");
+		printf("\nplease select a menu item to continue...\n");
+		printf("0: Exit.\n");
+		printf("1: Print weight,two parameters, the first is the command number and the second is the network layer index.\n");
+		printf("2: Print gradients usage same as print weight.\n");
+		printf("3: Print neural network information,displays the network structure information.\n");
 
+		printf("4: Start trainning one by one,learn one cifar-10 picture at a time.\n");
+		printf("5: Start trainning by batch,learn a batch cifar-10 picture at a time.\n");
+		printf("6: Start trainning without saving weights,learning of the cifar-10 50,000 images do not save weights.\n");
+		printf("7: Start trainning and saving weights,learning of the cifar-10 50,000 images and save weights to file cifar10.w.\n");
+		
+		printf("8: Load  weights from file cifar10.w\n");
+		printf("\nplease select a menu item to continue:");
+
+		gets(str);
+		sscanf(str, "%d %d", &cmd, &layer);
+		printf("cmd=%d layer=%d\n", cmd, layer);
+
+		switch (cmd)
+		{
+		case 0:
+			CloseDataset();
+			return 0;
+		case 1:
+			if (PNeuralNetCNN != NULL)
+			{
+				PNeuralNetCNN->printWeights(PNeuralNetCNN, layer, 1);
+				PNeuralNetCNN->printWeights(PNeuralNetCNN, layer, 0);
+				PNeuralNetCNN->printWeights(PNeuralNetCNN, layer, 2);
+			}
+			break;
+		case 2:
+			if (PNeuralNetCNN != NULL)
+			{
+				PNeuralNetCNN->printGradients(PNeuralNetCNN, layer, 1);
+				PNeuralNetCNN->printGradients(PNeuralNetCNN, layer, 0);
+				PNeuralNetCNN->printGradients(PNeuralNetCNN, layer, 2);
+			}
+			break;
+		case 3:
+			NeuralNetCNNPrintLayerInfor();
+			break;
+
+		case 4:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.trainingSaving = false;
+			PNeuralNetCNN->trainning.one_by_one = true;
+			PNeuralNetCNN->trainning.batch_by_batch = false;
+			NeuralNetStartTrainning();
+			break;
+		case 5:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.trainingSaving = false;
+			PNeuralNetCNN->trainning.one_by_one = false;
+			PNeuralNetCNN->trainning.batch_by_batch = true;
+			NeuralNetStartTrainning();
+			break;
+		case 6:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.trainingSaving = false;
+			PNeuralNetCNN->trainning.batch_by_batch = false;
+			PNeuralNetCNN->trainning.one_by_one = false;
+			NeuralNetStartTrainning();
+			break;
+		case 7:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.trainingSaving = true;
+			PNeuralNetCNN->trainning.one_by_one = false;
+			PNeuralNetCNN->trainning.batch_by_batch = false;
+			NeuralNetStartTrainning();
+			break;
+		case 8:
+			if (PNeuralNetCNN != NULL)
+			{
+				PNeuralNetCNN->load(PNeuralNetCNN);
+			}
+			break;
+		case 9:
+			break;
+		default:
+			printf("\n");
+			break;
+		}
+		fflush(stdin);
+	}
 	return 0;
 }
-#endif
 
+void showBanner(void)
+{
+	char pwd_path[100]; // print work directory
+	FILE *fp = fopen("../banner.txt", "r");
+
+	if (fp != NULL)
+	{
+		while (fgets(pwd_path, sizeof(pwd_path), fp) != NULL)
+		{
+			printf("%s\n", pwd_path);
+		}
+	}
+
+	if (fp != NULL)
+		fclose(fp);
+	// if (getcwd(pwd_path, 512) != NULL)
+	//	LOGINFO("%s\n", pwd_path);
+}
 #if 0
 int main()
 {
@@ -87,19 +177,5 @@ int main()
 	pv->print(pv, 0);
 
 	return 0;
-}
-#endif
-#if 0
-int main()
-{
-	for (int i = 0; i < 50000; i++)
-	{
-		printf("qwer0=%d\n", i);
-		printf("qwer1=%d\n", i);
-		printf("qwer2=%d\n", i);
-		//printf("\b\b\b");
-		printf("\033[3A");
-		
-	}
 }
 #endif

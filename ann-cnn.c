@@ -2,28 +2,30 @@
  * ann-cnn.c
  *
  *  Created on: Mar 29, 2023
- *      Author: M
+ *  Author: M
  ******************************************************************************************************
  ******************************************************************************************************/
 #ifdef PLATFORM_STM32
 #include "usart.h"
 #include "octopus.h"
 #endif
-
 #include "ann-cnn.h"
 
 char *CNNTypeName[] = {"Input", "Convolution", "ReLu", "Pool", "FullyConnection", "SoftMax", "None"};
 
-void testDSPFloatProcess(void)
+void testDSPFloatProcess(float32_t f1, float32_t f2)
 {
-	float32_t fv;
+	// float32_t fv;
 	// fv = arm_sin_f32(3.1415926 / 7);
-	// printf("sin=%.5f\r\n", fv);
+	printf("hello got value %f %f\r\n", f1, f2);
 }
 
 time_t GetTimestamp(void)
 {
-	return time(NULL);
+	clock_t t = clock();
+	int tick = t * 1000 / CLOCKS_PER_SEC;
+	return tick;
+	//return time(NULL);
 }
 
 double GaussRandom2(void)
@@ -102,7 +104,7 @@ float32_t GaussRandom(void)
 	v = 2 * rand() - 1;
 #endif
 	r = u * u + v * v;
-	if ((r = 0) || (r > 1))
+	if ((r == 0) || (r > 1))
 	{
 		return GaussRandom();
 	}
@@ -166,7 +168,6 @@ void FillWith(TPTensor PTensor, float32_t Bias)
 void FillGauss(TPTensor PTensor)
 {
 	float32_t scale = 0;
-
 #ifdef PLATFORM_STM32
 	arm_sqrt_f32(1.0 / PTensor->length, &scale);
 #else
@@ -207,8 +208,9 @@ TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth)
 		tPVolume->fillGauss = FillGauss;
 		tPVolume->setValue = VolumeSetValue;
 		tPVolume->getValue = VolumeGetValue;
-		tPVolume->getGradValue = VolumeGetValue;
+		tPVolume->addValue = VolumeAddValue;
 		tPVolume->setGradValue = VolumeSetGradValue;
+		tPVolume->getGradValue = VolumeGetGradValue;
 		tPVolume->addGradValue = VolumeAddGradValue;
 		tPVolume->print = VolumePrint;
 	}
@@ -250,6 +252,11 @@ TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNum
 		tPFilters->_depth = Depth;
 		tPFilters->filterNumber = FilterNumber;
 		tPFilters->volumes = malloc(sizeof(TPVolume) * tPFilters->filterNumber);
+		if (tPFilters->volumes == NULL)
+		{
+			LOGERROR("tPFilters->volumes==NULL! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
+			return NULL;
+		}
 		for (uint16_t i = 0; i < tPFilters->filterNumber; i++)
 		{
 			tPFilters->volumes[i] = MakeVolume(tPFilters->_w, tPFilters->_w, tPFilters->_depth);
@@ -352,7 +359,7 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
 {
 	if (PVolume->_h == 1 && PVolume->_w == 1)
 	{
-		if (wg == 0)
+		if (wg == PRINTFLAG_WEIGHT)
 			LOGINFO("weight:PVolume->_depth=%d/%d", PVolume->_depth, PVolume->_depth);
 		else
 			LOGINFO("grads:PVolume->_depth=%d/%d", PVolume->_depth, PVolume->_depth);
@@ -362,20 +369,20 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
 	{
 		if (PVolume->_h == 1 && PVolume->_w == 1)
 		{
-			if (wg == 0)
+			if (wg == PRINTFLAG_WEIGHT)
 			{
 				f32 = PVolume->getValue(PVolume, 0, 0, d);
-				(d == 0) ? LOG("%f", f32) : LOG(",%f", f32);
+				(d == 0) ? LOG(PRINTFLAG_FORMAT, f32) : LOG("," PRINTFLAG_FORMAT, f32);
 			}
 			else
 			{
 				f32 = PVolume->getGradValue(PVolume, 0, 0, d);
-				(d == 0) ? LOG("%f", f32) : LOG(",%f", f32);
+				(d == 0) ? LOG(PRINTFLAG_FORMAT, f32) : LOG("," PRINTFLAG_FORMAT, f32);
 			}
 		}
 		else
 		{
-			if (wg == 0)
+			if (wg == PRINTFLAG_WEIGHT)
 				LOGINFO("weight:PVolume->_depth=%d/%d %dx%d", d, PVolume->_depth, PVolume->_w, PVolume->_h);
 			else
 				LOGINFO("grads:PVolume->_depth=%d/%d %dx%d", d, PVolume->_depth, PVolume->_w, PVolume->_h);
@@ -383,15 +390,15 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
 			{
 				for (uint16_t x = 0; x < PVolume->_w; x++)
 				{
-					if (wg == 0)
+					if (wg == PRINTFLAG_WEIGHT)
 					{
 						f32 = PVolume->getValue(PVolume, x, y, d);
-						(x == 0) ? LOG("%f", f32) : LOG(",%f", f32);
+						(x == 0) ? LOG(PRINTFLAG_FORMAT, f32) : LOG("," PRINTFLAG_FORMAT, f32);
 					}
 					else
 					{
 						f32 = PVolume->getGradValue(PVolume, x, y, d);
-						(x == 0) ? LOG("%f", f32) : LOG(",%f", f32);
+						(x == 0) ? LOG(PRINTFLAG_FORMAT, f32) : LOG("," PRINTFLAG_FORMAT, f32);
 					}
 				}
 				LOG("\n");
@@ -426,6 +433,10 @@ void InputLayerForward(TPInputLayer PInputLayer, TPVolume PVolume)
 		LOGERROR("%s is null", CNNTypeName[PInputLayer->layer.LayerType]);
 		return;
 	}
+	if (PInputLayer->layer.in_v != NULL)
+	{
+		FreeVolume(PInputLayer->layer.in_v);
+	}
 	PInputLayer->layer.in_w = PVolume->_w;
 	PInputLayer->layer.in_h = PVolume->_h;
 	PInputLayer->layer.in_depth = PVolume->_depth;
@@ -445,9 +456,8 @@ void InputLayerFree(TPInputLayer PInputLayer)
 	FreeVolume(PInputLayer->layer.in_v);
 	FreeVolume(PInputLayer->layer.out_v);
 }
-void  MatrixMultip(TPTensor PTenser1,TPTensor PTenser2,TPTensor out) 
+void MatrixMultip(TPTensor PInTenser, TPTensor PFilter, TPTensor out)
 {
-
 }
 /////////////////////////////////////////////////////////////////////////////
 /// @brief //////////////////////////////////////////////////////////////////
@@ -483,7 +493,7 @@ void ConvolutionLayerInit(TPConvLayer PConvLayer, TPLayerOption PLayerOption)
 	PConvLayer->layer.out_depth = PConvLayer->filters->filterNumber;
 
 	PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
-	PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, PConvLayer->bias);
+	PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
 
 	PConvLayer->biases = MakeVolume(1, 1, PConvLayer->layer.out_depth);
 	PConvLayer->biases->init(PConvLayer->biases, 1, 1, PConvLayer->layer.out_depth, PConvLayer->bias);
@@ -523,7 +533,7 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
 			FreeVolume(PConvLayer->layer.out_v);
 		}
 		PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
-		PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, PConvLayer->bias);
+		PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
 	}
 }
 /// @brief //////////////////////////////////////////////////////////////////////////
@@ -582,7 +592,7 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
 	}
 }
 /// @brief ////////////////////////////////////////////////////////////////////////////////
-/// @param PConvLayer 
+/// @param PConvLayer
 /// y = wx+b 求关于in w b的偏导数
 void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 {
@@ -606,6 +616,7 @@ void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 			for (uint16_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
 			{
 				out_grad = outVolu->getGradValue(outVolu, out_x, out_y, out_d);
+				// assert(!IsFloatUnderflow(out_grad));
 				for (uint16_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
 				{
 					oy = filter_y + y;
@@ -648,7 +659,7 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 		TPResponse PResponse = malloc(sizeof(TResponse));
 		if (PResponse != NULL)
 		{
-			PResponse->filter = PConvLayer->filters->volumes[out_d]->weight;
+			PResponse->filterWeight = PConvLayer->filters->volumes[out_d]->weight;
 			PResponse->filterGrads = PConvLayer->filters->volumes[out_d]->weight_d;
 			PResponse->l1_decay_mul = PConvLayer->l1_decay_mul;
 			PResponse->l2_decay_mul = PConvLayer->l2_decay_mul;
@@ -661,10 +672,10 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 	TPResponse PResponse = malloc(sizeof(TResponse));
 	if (PResponse != NULL)
 	{
-		PResponse->filter = PConvLayer->biases->weight;
+		PResponse->filterWeight = PConvLayer->biases->weight;
 		PResponse->filterGrads = PConvLayer->biases->weight_d;
-		PResponse->l1_decay_mul = PConvLayer->l1_decay_mul;
-		PResponse->l2_decay_mul = PConvLayer->l2_decay_mul;
+		PResponse->l1_decay_mul = 0;
+		PResponse->l2_decay_mul = 0;
 		PResponse->fillZero = FillZero;
 		PResponse->free = FreeTensor;
 		tPResponses[PConvLayer->layer.out_depth] = PResponse;
@@ -673,11 +684,6 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 }
 
 float32_t ConvolutionLayerBackwardLoss(TPConvLayer PConvLayer, int Y)
-{
-	return 0.00;
-}
-
-float32_t ConvolutionLayerBackwardOutput(TPConvLayer PConvLayer, TTensor Tensor)
 {
 	return 0.00;
 }
@@ -768,19 +774,14 @@ void ReluLayerBackward(TPReluLayer PReluLayer)
 {
 	for (uint16_t out_l = 0; out_l < PReluLayer->layer.in_v->weight->length; out_l++)
 	{
-		if (PReluLayer->layer.out_v->weight->buffer[out_l] < 0)
+		if (PReluLayer->layer.out_v->weight->buffer[out_l] <= 0)
 			PReluLayer->layer.in_v->weight_d->buffer[out_l] = 0;
 		else
-			PReluLayer->layer.in_v->weight->buffer[out_l] = PReluLayer->layer.out_v->weight_d->buffer[out_l];
+			PReluLayer->layer.in_v->weight_d->buffer[out_l] = PReluLayer->layer.out_v->weight_d->buffer[out_l];
 	}
 }
 
 float32_t ReluLayerBackwardLoss(TPReluLayer PReluLayer, int Y)
-{
-	return 0.00;
-}
-
-float32_t ReluLayerBackwardOutput(TPReluLayer PReluLayer, TTensor Tensor)
 {
 	return 0.00;
 }
@@ -801,18 +802,15 @@ void PoolLayerInit(TPPoolLayer PPoolLayer, TPLayerOption PLayerOption)
 	PPoolLayer->stride = PLayerOption->stride;
 	PPoolLayer->padding = PLayerOption->padding;
 	// PPoolLayer->bias = PLayerOption->bias;
-
-	PPoolLayer->filter._w = PLayerOption->filter_w;
-	PPoolLayer->filter._h = PLayerOption->filter_h;
-	PPoolLayer->filter._depth = PLayerOption->filter_depth;
+	PPoolLayer->filter = MakeVolume(PLayerOption->filter_w, PLayerOption->filter_h, PLayerOption->filter_depth);
 
 	PPoolLayer->layer.in_w = PLayerOption->in_w;
 	PPoolLayer->layer.in_h = PLayerOption->in_h;
 	PPoolLayer->layer.in_depth = PLayerOption->in_depth;
 	PPoolLayer->layer.in_v = NULL;
 
-	PPoolLayer->layer.out_w = floor((PPoolLayer->layer.in_w + PPoolLayer->padding * 2 - PPoolLayer->filter._w) / PPoolLayer->stride + 1);
-	PPoolLayer->layer.out_h = floor((PPoolLayer->layer.in_h + PPoolLayer->padding * 2 - PPoolLayer->filter._h) / PPoolLayer->stride + 1);
+	PPoolLayer->layer.out_w = floor((PPoolLayer->layer.in_w + PPoolLayer->padding * 2 - PPoolLayer->filter->_w) / PPoolLayer->stride + 1);
+	PPoolLayer->layer.out_h = floor((PPoolLayer->layer.in_h + PPoolLayer->padding * 2 - PPoolLayer->filter->_h) / PPoolLayer->stride + 1);
 	PPoolLayer->layer.out_depth = PPoolLayer->layer.in_depth;
 
 	PPoolLayer->layer.out_v = MakeVolume(PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth);
@@ -835,8 +833,8 @@ void PoolLayerInit(TPPoolLayer PPoolLayer, TPLayerOption PLayerOption)
 
 void poolLayerOutResize(TPPoolLayer PPoolLayer)
 {
-	uint16_t out_w = floor((PPoolLayer->layer.in_w + PPoolLayer->padding * 2 - PPoolLayer->filter._w) / PPoolLayer->stride + 1);
-	uint16_t out_h = floor((PPoolLayer->layer.in_h + PPoolLayer->padding * 2 - PPoolLayer->filter._h) / PPoolLayer->stride + 1);
+	uint16_t out_w = floor((PPoolLayer->layer.in_w + PPoolLayer->padding * 2 - PPoolLayer->filter->_w) / PPoolLayer->stride + 1);
+	uint16_t out_h = floor((PPoolLayer->layer.in_h + PPoolLayer->padding * 2 - PPoolLayer->filter->_h) / PPoolLayer->stride + 1);
 	if (PPoolLayer->layer.out_w != out_w || PPoolLayer->layer.out_h != out_h || PPoolLayer->layer.out_depth != PPoolLayer->layer.in_depth)
 	{
 		LOGINFO("PoolLayer resize out_v from %d x %d x %d to %d x %d x %d", PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, out_w, out_h, PPoolLayer->layer.in_depth);
@@ -863,7 +861,7 @@ void poolLayerOutResize(TPPoolLayer PPoolLayer)
 
 void PoolLayerForward(TPPoolLayer PPoolLayer)
 {
-	float32_t max_value = MINI_NEGATIVE_NUMBER;
+	float32_t max_value = MINFLOAT_NEGATIVE_NUMBER;
 	float32_t value = 0;
 	uint16_t x = -PPoolLayer->padding;
 	uint16_t y = -PPoolLayer->padding;
@@ -883,15 +881,15 @@ void PoolLayerForward(TPPoolLayer PPoolLayer)
 
 			for (uint16_t out_x = 0; out_x < PPoolLayer->layer.out_w; out_x++)
 			{
-				max_value = MINI_NEGATIVE_NUMBER;
+				max_value = MINFLOAT_NEGATIVE_NUMBER;
 				inx = -1;
 				iny = -1;
-				for (uint16_t filter_y = 0; filter_y < PPoolLayer->filter._h; filter_y++)
+				for (uint16_t filter_y = 0; filter_y < PPoolLayer->filter->_h; filter_y++)
 				{
 					oy = filter_y + y;
 					if (oy < 0 && oy >= inVolu->_h)
 						continue;
-					for (uint16_t filter_x = 0; filter_x < PPoolLayer->filter._w; filter_x++)
+					for (uint16_t filter_x = 0; filter_x < PPoolLayer->filter->_w; filter_x++)
 					{
 						ox = filter_x + x;
 						if (ox >= 0 && ox < inVolu->_w && oy >= 0 && oy < inVolu->_h)
@@ -917,7 +915,7 @@ void PoolLayerForward(TPPoolLayer PPoolLayer)
 }
 /// @brief ////////////////////////////////////////////////////////////////////////////////////
 /// @param PPoolLayer /
-/// 
+///
 void PoolLayerBackward(TPPoolLayer PPoolLayer)
 {
 	float32_t grad_value = 0.00;
@@ -950,11 +948,6 @@ float32_t PoolLayerBackwardLoss(TPPoolLayer PPoolLayer, int Y)
 	return 0.00;
 }
 
-float32_t PoolLayerBackwardOutput(TPPoolLayer PPoolLayer, TTensor Tensor)
-{
-	return 0.00;
-}
-
 void PoolLayerFree(TPPoolLayer PPoolLayer)
 {
 	FreeVolume(PPoolLayer->layer.in_v);
@@ -971,8 +964,8 @@ void PoolLayerFree(TPPoolLayer PPoolLayer)
 void FullyConnLayerInit(TPFullyConnLayer PFullyConnLayer, TPLayerOption PLayerOption)
 {
 	PFullyConnLayer->layer.LayerType = PLayerOption->LayerType;
-	// PFullyConnLayer->l1_decay_mul = LayerOption.l1_decay_mul;
-	// PFullyConnLayer->l2_decay_mul = LayerOption.l2_decay_mul;
+	PFullyConnLayer->l1_decay_mul = PLayerOption->l1_decay_mul;
+	PFullyConnLayer->l2_decay_mul = PLayerOption->l2_decay_mul;
 	// PFullyConnLayer->stride = LayerOption.stride;
 	// PFullyConnLayer->padding = LayerOption.padding;
 	PFullyConnLayer->bias = PLayerOption->bias;
@@ -1002,7 +995,7 @@ void FullyConnLayerInit(TPFullyConnLayer PFullyConnLayer, TPLayerOption PLayerOp
 	PFullyConnLayer->layer.out_depth = PFullyConnLayer->filters->filterNumber;
 	PFullyConnLayer->layer.out_v = MakeVolume(PFullyConnLayer->layer.out_w, PFullyConnLayer->layer.out_h, PFullyConnLayer->layer.out_depth);
 	PFullyConnLayer->layer.out_v->init(PFullyConnLayer->layer.out_v, PFullyConnLayer->layer.out_w, PFullyConnLayer->layer.out_h,
-									   PFullyConnLayer->layer.out_depth, PFullyConnLayer->bias);
+									   PFullyConnLayer->layer.out_depth, 0);
 
 	PFullyConnLayer->biases = MakeVolume(1, 1, PFullyConnLayer->layer.out_depth);
 	PFullyConnLayer->biases->init(PFullyConnLayer->biases, 1, 1, PFullyConnLayer->layer.out_depth, PFullyConnLayer->bias);
@@ -1060,7 +1053,7 @@ void FullyConnLayerForward(TPFullyConnLayer PFullyConnLayer)
 }
 
 /// @brief /////////////////////////////////////////////////////////////////////////////////////////////////
-/// @param PFullyConnLayer 
+/// @param PFullyConnLayer
 /// y = wx+b 求关于in w b的偏导数
 void FullyConnLayerBackward(TPFullyConnLayer PFullyConnLayer)
 {
@@ -1090,11 +1083,6 @@ float32_t FullyConnLayerBackwardLoss(TPFullyConnLayer PFullyConnLayer, int Y)
 	return 0.00;
 }
 
-float32_t FullyConnLayerBackwardOutput(TPFullyConnLayer PFullyConnLayer, TTensor Tensor)
-{
-	return 0.00;
-}
-
 TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 {
 	if (PFullyConnLayer->layer.out_depth <= 0)
@@ -1107,7 +1095,7 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 		TPResponse PResponse = malloc(sizeof(TResponse));
 		if (PResponse != NULL)
 		{
-			PResponse->filter = PFullyConnLayer->filters->volumes[out_d]->weight;
+			PResponse->filterWeight = PFullyConnLayer->filters->volumes[out_d]->weight;
 			PResponse->filterGrads = PFullyConnLayer->filters->volumes[out_d]->weight_d;
 			PResponse->l1_decay_mul = PFullyConnLayer->l1_decay_mul;
 			PResponse->l2_decay_mul = PFullyConnLayer->l2_decay_mul;
@@ -1119,7 +1107,7 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 	TPResponse PResponse = malloc(sizeof(TResponse));
 	if (PResponse != NULL)
 	{
-		PResponse->filter = PFullyConnLayer->biases->weight;
+		PResponse->filterWeight = PFullyConnLayer->biases->weight;
 		PResponse->filterGrads = PFullyConnLayer->biases->weight_d;
 		PResponse->l1_decay_mul = 0;
 		PResponse->l2_decay_mul = 0;
@@ -1152,6 +1140,8 @@ void SoftmaxLayerInit(TPSoftmaxLayer PSoftmaxLayer, TPLayerOption PLayerOption)
 	PSoftmaxLayer->layer.in_w = PLayerOption->in_w;
 	PSoftmaxLayer->layer.in_h = PLayerOption->in_h;
 	PSoftmaxLayer->layer.in_depth = PLayerOption->in_depth;
+	PSoftmaxLayer->layer.in_v = NULL;
+
 	PSoftmaxLayer->layer.out_w = 1;
 	PSoftmaxLayer->layer.out_h = 1;
 	PSoftmaxLayer->layer.out_depth = PLayerOption->in_w * PLayerOption->in_h * PLayerOption->in_depth;
@@ -1193,7 +1183,7 @@ void softmaxLayOutResize(TPSoftmaxLayer PSoftmaxLayer)
 // 归一化后的真数当作概率分布
 void SoftmaxLayerForward(TPSoftmaxLayer PSoftmaxLayer)
 {
-	float32_t max_value = MINI_NEGATIVE_NUMBER;
+	float32_t max_value = MINFLOAT_NEGATIVE_NUMBER;
 	float32_t sum = 0.0;
 	float32_t expv = 0.0;
 	float32_t temp = 0.0;
@@ -1268,8 +1258,8 @@ void SoftmaxLayerFree(TPSoftmaxLayer PSoftmaxLayer)
 
 ////////////////////////////////////////////////////////////////////////////////////
 /// @brief /////////////////////////////////////////////////////////////////////////
-/// @param PNeuralNet 
-/// @param PLayerOption 
+/// @param PNeuralNet
+/// @param PLayerOption
 void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 {
 	if (PNeuralNet == NULL)
@@ -1280,6 +1270,7 @@ void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 	case Layer_Type_Input:
 	{
 		PNeuralNet->depth = 1;
+		// free(PNeuralNet->layers);
 		PNeuralNet->layers = malloc(sizeof(TPLayer) * PNeuralNet->depth);
 		if (PNeuralNet->layers != NULL)
 		{
@@ -1288,8 +1279,8 @@ void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 			InputLayer->free = InputLayerFree;
 			InputLayer->forward = InputLayerForward;
 			InputLayer->backward = InputLayerBackward;
-			InputLayer->computeLoss = NULL;	   // InputLayerBackwardLoss;
-			InputLayer->backwardOutput = NULL; // InputLayerBackwardOutput;
+			InputLayer->computeLoss = NULL; // InputLayerBackwardLoss;
+			// InputLayer->backwardOutput = NULL; // InputLayerBackwardOutput;
 			InputLayerInit(InputLayer, PLayerOption);
 			PNeuralNet->layers[PNeuralNet->depth - 1] = (TPLayer)InputLayer;
 		}
@@ -1310,8 +1301,8 @@ void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 			ConvLayer->forward = ConvolutionLayerForward;
 			ConvLayer->backward = ConvolutionLayerBackward;
 			ConvLayer->computeLoss = ConvolutionLayerBackwardLoss;
-			ConvLayer->backwardOutput = ConvolutionLayerBackwardOutput;
-			ConvLayer->getParamsAndGrads = ConvolutionLayerGetParamsAndGradients;
+			// ConvLayer->backwardOutput = ConvolutionLayerBackwardOutput;
+			ConvLayer->getWeightAndGrads = ConvolutionLayerGetParamsAndGradients;
 			ConvolutionLayerInit(ConvLayer, PLayerOption);
 			PNeuralNet->layers[PNeuralNet->depth - 1] = (TPLayer)ConvLayer;
 		}
@@ -1332,7 +1323,7 @@ void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 			PoolLayer->forward = PoolLayerForward;
 			PoolLayer->backward = PoolLayerBackward;
 			PoolLayer->computeLoss = PoolLayerBackwardLoss;
-			PoolLayer->backwardOutput = PoolLayerBackwardOutput;
+			// PoolLayer->backwardOutput = PoolLayerBackwardOutput;
 			PoolLayerInit(PoolLayer, PLayerOption);
 			PNeuralNet->layers[PNeuralNet->depth - 1] = (TPLayer)PoolLayer;
 		}
@@ -1353,7 +1344,7 @@ void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 			ReluLayer->forward = ReluLayerForward;
 			ReluLayer->backward = ReluLayerBackward;
 			ReluLayer->computeLoss = ReluLayerBackwardLoss;
-			ReluLayer->backwardOutput = ReluLayerBackwardOutput;
+			// ReluLayer->backwardOutput = ReluLayerBackwardOutput;
 			ReluLayerInit(ReluLayer, PLayerOption);
 			PNeuralNet->layers[PNeuralNet->depth - 1] = (TPLayer)ReluLayer;
 		}
@@ -1374,8 +1365,8 @@ void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption)
 			FullyConnLayer->forward = FullyConnLayerForward;
 			FullyConnLayer->backward = FullyConnLayerBackward;
 			FullyConnLayer->computeLoss = FullyConnLayerBackwardLoss;
-			FullyConnLayer->backwardOutput = FullyConnLayerBackwardOutput;
-			FullyConnLayer->getParamsAndGrads = FullyConnLayerGetParamsAndGrads;
+			// FullyConnLayer->backwardOutput = FullyConnLayerBackwardOutput;
+			FullyConnLayer->getWeightAndGrads = FullyConnLayerGetParamsAndGrads;
 			FullyConnLayerInit(FullyConnLayer, PLayerOption);
 			PNeuralNet->layers[PNeuralNet->depth - 1] = (TPLayer)FullyConnLayer;
 		}
@@ -1459,12 +1450,13 @@ void NeuralNetForward(TPNeuralNet PNeuralNet, TPVolume PVolume)
 {
 	if (PVolume == NULL)
 		return;
-	TPVolume in_v = NULL;
+	TPVolume out_v = NULL;
 	TPInputLayer PInputLayer = (TPInputLayer)PNeuralNet->layers[0];
 	if (PInputLayer->layer.LayerType != Layer_Type_Input)
 	{
 		return;
 	}
+
 	PInputLayer->forward(PInputLayer, PVolume);
 
 	for (uint16_t layerIndex = 1; layerIndex < PNeuralNet->depth; layerIndex++)
@@ -1472,13 +1464,14 @@ void NeuralNetForward(TPNeuralNet PNeuralNet, TPVolume PVolume)
 		// PNeuralNet->layers[layerIndex]->in_v->_w = PNeuralNet->layers[layerIndex - 1]->out_w;
 		// PNeuralNet->layers[layerIndex]->in_v->_h = PNeuralNet->layers[layerIndex - 1]->out_h;
 		// PNeuralNet->layers[layerIndex]->in_v->_depth = PNeuralNet->layers[layerIndex - 1]->out_depth;
-		in_v = PNeuralNet->layers[layerIndex - 1]->out_v;
-		if (in_v == NULL)
+		out_v = PNeuralNet->layers[layerIndex - 1]->out_v;
+		if (out_v == NULL)
 		{
 			LOGERROR("Input volume is null, layerIndex=%d layereType=%d\n", layerIndex, PNeuralNet->layers[layerIndex - 1]->LayerType);
 			break;
 		}
-		PNeuralNet->layers[layerIndex]->in_v = in_v;
+
+		PNeuralNet->layers[layerIndex]->in_v = out_v;
 
 		switch (PNeuralNet->layers[layerIndex]->LayerType)
 		{
@@ -1561,9 +1554,10 @@ void NeuralNetBackward(TPNeuralNet PNeuralNet)
 	}
 }
 
-void NeuralNetGetParamsAndGrads(TPNeuralNet PNeuralNet)
+void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 {
-	// TPResponse *pResponseResult;
+	bool weight_flow = false;
+	bool grads_flow = false;
 	void *temp = NULL;
 	if (PNeuralNet->trainning.pResponseResults != NULL)
 	{
@@ -1580,22 +1574,49 @@ void NeuralNetGetParamsAndGrads(TPNeuralNet PNeuralNet)
 		{
 		case Layer_Type_Input:
 		{
-			// pResponseResult = ((TPInputLayer) PNeuralNet->layers[layerIndex])->getParamsAndGrads();
+			// pResponseResult = ((TPInputLayer) PNeuralNet->layers[layerIndex])->getWeightAndGrads();
 			break;
 		}
 
 		case Layer_Type_Convolution:
 		{
-			TPResponse *pResponseResult = ((TPConvLayer)PNeuralNet->layers[layerIndex])->getParamsAndGrads(((TPConvLayer)PNeuralNet->layers[layerIndex]));
+			TPResponse *pResponseResult = ((TPConvLayer)PNeuralNet->layers[layerIndex])->getWeightAndGrads(((TPConvLayer)PNeuralNet->layers[layerIndex]));
 			for (uint16_t i = 0; i <= ((TPConvLayer)PNeuralNet->layers[layerIndex])->layer.out_depth; i++)
 			{
 				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPResponse) * (PNeuralNet->trainning.responseCount + 1));
 				if (temp != NULL)
 				{
+					#if 0
+					for (uint16_t w_l = 0; w_l < pResponseResult[i]->filterWeight->length; w_l++)
+					{
+						if (IsFloatOverflow(pResponseResult[i]->filterWeight->buffer[w_l]))
+						{
+							PNeuralNet->trainning.overflow = true;
+							weight_flow = true;
+						}
+					}
+					for (uint16_t w_l = 0; w_l < pResponseResult[i]->filterGrads->length; w_l++)
+					{
+						if (IsFloatOverflow(pResponseResult[i]->filterGrads->buffer[w_l]))
+						{
+							PNeuralNet->trainning.overflow = true;
+							grads_flow = true;
+						}
+					}
+					#endif
 					PNeuralNet->trainning.pResponseResults = temp;
 					PNeuralNet->trainning.pResponseResults[PNeuralNet->trainning.responseCount] = pResponseResult[i];
 					PNeuralNet->trainning.responseCount++;
 				}
+			}
+			if (PNeuralNet->trainning.underflow)
+				LOGERROR("filterGrads underflow %s %d", NeuralNetGetName(Layer_Type_Convolution), layerIndex);
+			if (PNeuralNet->trainning.overflow)
+			{
+				if (grads_flow)
+					LOGERROR("filterGrads overflow %s %d", NeuralNetGetName(Layer_Type_Convolution), layerIndex);
+				if (weight_flow)
+					LOGERROR("filterWeight overflow %s %d", NeuralNetGetName(Layer_Type_Convolution), layerIndex);
 			}
 			free(pResponseResult);
 			break;
@@ -1603,28 +1624,56 @@ void NeuralNetGetParamsAndGrads(TPNeuralNet PNeuralNet)
 
 		case Layer_Type_Pool:
 		{
-			// pResponseResult = ((TPPoolLayer) PNeuralNet->layers[layerIndex])->getParamsAndGrads();
+			// pResponseResult = ((TPPoolLayer) PNeuralNet->layers[layerIndex])->getWeightAndGrads();
 			break;
 		}
 
 		case Layer_Type_ReLu:
 		{
-			// pResponseResult = ((TPReluLayer) PNeuralNet->layers[layerIndex])->getParamsAndGrads();
+			// pResponseResult = ((TPReluLayer) PNeuralNet->layers[layerIndex])->getWeightAndGrads();
 			break;
 		}
 
 		case Layer_Type_FullyConnection:
 		{
-			TPResponse *pResponseResult = ((TPFullyConnLayer)PNeuralNet->layers[layerIndex])->getParamsAndGrads(((TPFullyConnLayer)PNeuralNet->layers[layerIndex]));
+			TPResponse *pResponseResult = ((TPFullyConnLayer)PNeuralNet->layers[layerIndex])->getWeightAndGrads(((TPFullyConnLayer)PNeuralNet->layers[layerIndex]));
 			for (uint16_t i = 0; i <= ((TPConvLayer)PNeuralNet->layers[layerIndex])->layer.out_depth; i++)
 			{
 				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPResponse) * (PNeuralNet->trainning.responseCount + 1));
 				if (temp != NULL)
 				{
+					#if 0
+					for (uint16_t w_l = 0; w_l < pResponseResult[i]->filterWeight->length; w_l++)
+					{
+						if (IsFloatOverflow(pResponseResult[i]->filterWeight->buffer[w_l]))
+						{
+							PNeuralNet->trainning.overflow = true;
+							weight_flow = true;
+						}
+					}
+					for (uint16_t w_l = 0; w_l < pResponseResult[i]->filterWeight->length; w_l++)
+					{
+						if (IsFloatOverflow(pResponseResult[i]->filterGrads->buffer[w_l]))
+						{
+							PNeuralNet->trainning.overflow = true;
+							grads_flow = true;
+						}
+					}
+					#endif
 					PNeuralNet->trainning.pResponseResults = temp;
 					PNeuralNet->trainning.pResponseResults[PNeuralNet->trainning.responseCount] = pResponseResult[i];
 					PNeuralNet->trainning.responseCount++;
 				}
+			}
+
+			if (PNeuralNet->trainning.underflow)
+				LOGERROR("filterGrads underflow %s %d", NeuralNetGetName(Layer_Type_FullyConnection), layerIndex);
+			if (PNeuralNet->trainning.overflow)
+			{
+				if (grads_flow)
+					LOGERROR("filterGrads overflow %s %d", NeuralNetGetName(Layer_Type_FullyConnection), layerIndex);
+				if (weight_flow)
+					LOGERROR("filterWeight overflow %s %d", NeuralNetGetName(Layer_Type_FullyConnection), layerIndex);
 			}
 			free(pResponseResult);
 			break;
@@ -1632,7 +1681,7 @@ void NeuralNetGetParamsAndGrads(TPNeuralNet PNeuralNet)
 
 		case Layer_Type_SoftMax:
 		{
-			// pResponseResult = ((TPSoftmaxLayer) PNeuralNet->Layers[layerIndex])->getParamsAndGrads();
+			// pResponseResult = ((TPSoftmaxLayer) PNeuralNet->Layers[layerIndex])->getWeightAndGrads();
 			break;
 		}
 		default:
@@ -1731,7 +1780,7 @@ void NeuralNetPrintWeights(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_t 
 {
 	// float32_t maxv = 0;
 	// uint16_t maxi = 0;
-	TPLayer pNetLayer = (PNeuralNet->layers[LayerIndex]);
+	TPLayer pNetLayer = (TPLayer)(PNeuralNet->layers[LayerIndex]);
 	// for (uint16_t i = 0; i < pNetLayer->out_v->weight->length; i++)
 	//{
 	//	LOGINFO("LayerType=%s PNeuralNet->depth=%d weight=%f", CNNTypeName[pNetLayer->LayerType], PNeuralNet->depth - 1, pNetLayer->out_v->weight->buffer[i]);
@@ -1739,31 +1788,54 @@ void NeuralNetPrintWeights(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_t 
 	if (InOut == 0)
 	{
 		LOGINFO("layers[%d] out_v type=%s w=%d h=%d depth=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
-		pNetLayer->out_v->print(pNetLayer->out_v, 0);
+		if (pNetLayer->out_v != NULL)
+			pNetLayer->out_v->print(pNetLayer->out_v, PRINTFLAG_WEIGHT);
+		else
+			LOGINFO("pNetLayer->out_v=NULL");
 	}
 	else if (InOut == 1)
 	{
 		LOGINFO("layers[%d] in_v type=%s w=%d h=%d depth=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth);
-		pNetLayer->in_v->print(pNetLayer->in_v, 0);
+		if (pNetLayer->in_v != NULL)
+			pNetLayer->in_v->print(pNetLayer->in_v, PRINTFLAG_WEIGHT);
+		else
+			LOGINFO("pNetLayer->in_v=NULL");
 	}
-	else if (pNetLayer->LayerType = Layer_Type_Convolution)
+	else if (pNetLayer->LayerType == Layer_Type_Convolution)
 	{
 		for (uint16_t i = 0; i < ((TPConvLayer)pNetLayer)->filters->filterNumber; i++)
 		{
 			LOGINFO("layers[%d] type=%s w=%d h=%d depth=%d filterNumber=%d/%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], ((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth, i, ((TPConvLayer)pNetLayer)->filters->filterNumber);
-			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], 0);
+			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_WEIGHT);
 		}
+		LOG("Biases:");
+		((TPConvLayer)pNetLayer)->biases->print(((TPConvLayer)pNetLayer)->biases, PRINTFLAG_WEIGHT);
 	}
-	else if (pNetLayer->LayerType = Layer_Type_FullyConnection)
+	else if (pNetLayer->LayerType == Layer_Type_FullyConnection)
 	{
 		for (uint16_t i = 0; i < ((TPFullyConnLayer)pNetLayer)->filters->filterNumber; i++)
 		{
 			LOGINFO("layers[%d] type=%s w=%d h=%d depth=%d filterNumber=%d/%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], ((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth, i, ((TPConvLayer)pNetLayer)->filters->filterNumber);
-			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], 0);
+			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_WEIGHT);
 		}
+		LOG("Biases:");
+		((TPFullyConnLayer)pNetLayer)->biases->print(((TPFullyConnLayer)pNetLayer)->biases, PRINTFLAG_WEIGHT);
+	}
+	else if (pNetLayer->LayerType == Layer_Type_SoftMax)
+	{
+		PNeuralNet->print("EXP", ((TPSoftmaxLayer)pNetLayer)->exp);
+	}
+	else if (pNetLayer->LayerType == Layer_Type_Pool)
+	{
+		//((TPPoolLayer)pNetLayer)->filter->print(((TPPoolLayer)pNetLayer)->filter, PRINTFLAG_WEIGHT);
 	}
 }
-
+/// <summary>
+/// discard
+/// </summary>
+/// <param name="PNeuralNet"></param>
+/// <param name="LayerIndex"></param>
+/// <param name="InOut"></param>
 void NeuralNetPrintFilters(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_t InOut)
 {
 	TPLayer pNetLayer = (PNeuralNet->layers[LayerIndex]);
@@ -1771,28 +1843,30 @@ void NeuralNetPrintFilters(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_t 
 	if (InOut == 0)
 	{
 		LOGINFO("layers[%d] out_v type=%s w=%d h=%d depth=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
-		pNetLayer->out_v->print(pNetLayer->out_v, 0);
+		pNetLayer->out_v->print(pNetLayer->out_v, PRINTFLAG_WEIGHT);
 	}
 	else if (InOut == 1)
 	{
 		LOGINFO("layers[%d] in_v type=%s w=%d h=%d depth=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
-		pNetLayer->in_v->print(pNetLayer->in_v, 0);
+		pNetLayer->in_v->print(pNetLayer->in_v, PRINTFLAG_WEIGHT);
 	}
-	else if (pNetLayer->LayerType = Layer_Type_Convolution)
+	else if (pNetLayer->LayerType == Layer_Type_Convolution)
 	{
 		LOGINFO("layers[%d] type=%s w=%d h=%d depth=%d filterNumber=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, ((TPConvLayer)pNetLayer)->filters->filterNumber);
 		for (uint16_t i = 0; i < ((TPConvLayer)pNetLayer)->filters->filterNumber; i++)
 		{
-			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], 0);
+			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_WEIGHT);
 		}
+		((TPConvLayer)pNetLayer)->biases->print(((TPConvLayer)pNetLayer)->biases, PRINTFLAG_WEIGHT);
 	}
-	else if (pNetLayer->LayerType = Layer_Type_FullyConnection)
+	else if (pNetLayer->LayerType == Layer_Type_FullyConnection)
 	{
 		LOGINFO("layers[%d] type=%s w=%d h=%d depth=%d filterNumber=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, ((TPConvLayer)pNetLayer)->filters->filterNumber);
 		for (uint16_t i = 0; i < ((TPFullyConnLayer)pNetLayer)->filters->filterNumber; i++)
 		{
-			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], 0);
+			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_WEIGHT);
 		}
+		((TPFullyConnLayer)pNetLayer)->biases->print(((TPFullyConnLayer)pNetLayer)->biases, PRINTFLAG_WEIGHT);
 	}
 }
 
@@ -1806,21 +1880,30 @@ void NeuralNetPrintGradients(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_
 	//	//LOGINFO("LayerType=%s PNeuralNet->depth=%d weight_grad=%f", CNNTypeName[pNetLayer->LayerType], PNeuralNet->depth - 1, pNetLayer->out_v->weight_grad->buffer[i]);
 	// }
 	if (InOut == 0)
-		pNetLayer->out_v->print(pNetLayer->out_v, 1);
-	else if (InOut == 1)
-		pNetLayer->in_v->print(pNetLayer->in_v, 1);
-	else if (pNetLayer->LayerType = Layer_Type_Convolution)
 	{
+		LOGINFO("layers[%d] out_v type=%s w=%d h=%d depth=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
+		pNetLayer->out_v->print(pNetLayer->out_v, PRINTFLAG_GRADS);
+	}
+	else if (InOut == 1)
+	{
+		LOGINFO("layers[%d] in_v type=%s w=%d h=%d depth=%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
+		if (pNetLayer->in_v != NULL)
+			pNetLayer->in_v->print(pNetLayer->in_v, PRINTFLAG_GRADS);
+	}
+	else if (pNetLayer->LayerType == Layer_Type_Convolution)
+	{
+		LOGINFO("layers[%d] w=%d h=%d depth=%d filterNumber=%d %s", LayerIndex, pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, ((TPConvLayer)pNetLayer)->filters->filterNumber, CNNTypeName[pNetLayer->LayerType]);
 		for (uint16_t i = 0; i < ((TPConvLayer)pNetLayer)->filters->filterNumber; i++)
 		{
-			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], 1);
+			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_GRADS);
 		}
 	}
-	else if (pNetLayer->LayerType = Layer_Type_FullyConnection)
+	else if (pNetLayer->LayerType == Layer_Type_FullyConnection)
 	{
+		LOGINFO("layers[%d] w=%d h=%d depth=%d filterNumber=%d %s", LayerIndex, pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, ((TPConvLayer)pNetLayer)->filters->filterNumber, CNNTypeName[pNetLayer->LayerType]);
 		for (uint16_t i = 0; i < ((TPFullyConnLayer)pNetLayer)->filters->filterNumber; i++)
 		{
-			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], 1);
+			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_GRADS);
 		}
 	}
 }
@@ -1831,130 +1914,147 @@ void NeuralNetPrint(char *Name, TPTensor PTensor)
 	{
 		if (i % 16 == 0)
 			LOG("\n");
-		LOG("%s[%d]=%f ", Name, i, PTensor->buffer[i]);
+		LOG("%s[%d]=" PRINTFLAG_FORMAT, Name, i, PTensor->buffer[i]);
 	}
 	LOG("\n");
 }
 
 void NeuralNetPrintTrainningInfo(TPNeuralNet PNeuralNet)
-{	
+{
 
-	LOGINFO("datasetTotal:%d datasetIndex:%d epochCount:%d sampleCount:%d labelIndex:%d batchCount:%d",
+	LOGINFO("DatasetTotal:%d DatasetIndex:%d EpochCount:%d SampleCount:%d LabelIndex:%d BatchCount:%d Iterations=%d",
 			PNeuralNet->trainning.datasetTotal,
-			PNeuralNet->trainning.datasetIndex,
+			PNeuralNet->trainning.trinning_dataset_index,
 			PNeuralNet->trainning.epochCount,
 			PNeuralNet->trainning.sampleCount,
 			PNeuralNet->trainning.labelIndex,
-			PNeuralNet->trainning.batchCount);
+			PNeuralNet->trainning.batchCount,
+		    PNeuralNet->trainning.iterations);
 
-	LOGINFO("costLost:%f l1_decay_loss:%f l2_decay_loss:%f trainingAccuracy:%f testingAccuracy:%f",
-			PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount / 1.00,
-			PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount/ 1.00,
-			PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount/ 1.00,
-			PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount/ 1.00,
-			PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount / 1.00);
-	LOGINFO("forward ticks:%d backward ticks:%d optimTime ticks:%d",
+	LOGINFO("CostLost:%.6f L1_decay_loss:%.6f L2_decay_loss:%.6f TrainingAccuracy:%.6f TestingAccuracy:%.6f",
+			PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
+			PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
+			PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
+			PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
+			PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
+
+	uint16_t avg_iterations_time = 0;
+    if(PNeuralNet->trainning.iterations > 0)
+	  avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
+
+	LOGINFO("TotalTime:%ld ForwardTime:%3ld BackwardTime:%3ld OptimTime:%3ld AvgBatchTime:%3ld AvgSampleTime:%3ld",
+		    PNeuralNet->totalTime,
 			PNeuralNet->fwTime,
 			PNeuralNet->bwTime,
-			PNeuralNet->optimTime);
+			PNeuralNet->optimTime,
+	    	avg_iterations_time,
+			PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
 }
 
 void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 {
-	TPTensor weight, grads, tempPTensor1, tempPTensor2;
-	TPResponse *pResponseResults;
-	TPResponse pResponse;
-	float32_t costLost;
-	float32_t l1_decay;
-	float32_t l2_decay;
-	float32_t l1_decay_grad;
-	float32_t l2_decay_grad;
-	float32_t gradij;
-	float32_t bias1, bias2;
-	float32_t dx;
-	tempPTensor1 = NULL;
-	tempPTensor2 = NULL;
+	TPTensor weight, grads, sumPTensor1, sumPTensor2;
+	TPResponse *pResponseResults = NULL;
+	TPResponse pResponse = NULL;
+	float32_t costLost = 0.00;
+	float32_t l1_decay = 0.00;
+	float32_t l2_decay = 0.00;
+	float32_t l1_decay_grad = 0.00;
+	float32_t l2_decay_grad = 0.00;
+	float32_t gradij = 0.00;
+	float32_t bias1 = 0.00;
+	float32_t bias2 = 0.00;
+	float32_t dx = 0.00;
+	float32_t temp = 0.00;
+	sumPTensor1 = NULL;
+	sumPTensor2 = NULL;
 	float32_t l1_decay_loss = 0;
 	float32_t l2_decay_loss = 0;
-	uint32_t starTick;
-	// uint32_t endTick;
+	uint32_t starTick = 0;
+
 	/////////////////////////////////////////////////////////////////////////////////////
+	PNeuralNet->optimTime = 0;
 	starTick = GetTimestamp();
 	PNeuralNet->forward(PNeuralNet, PVolume);
 	PNeuralNet->getCostLoss(PNeuralNet);
 	PNeuralNet->fwTime = GetTimestamp() - starTick;
-	// PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 2, 1);
-	// PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 2, 0);
-
-	PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 1, 1);
-	PNeuralNet->printWeights(PNeuralNet, PNeuralNet->depth - 1, 0);
-	PNeuralNet->print("EXP", ((TPSoftmaxLayer)PNeuralNet->layers[PNeuralNet->depth - 1])->exp);
-    ///////////////////////////////////////////////////////////////////////////////////////
-	//debug 
-	PNeuralNet->trainning.trainningGoing = false;
-	return;
-
 	starTick = GetTimestamp();
 	PNeuralNet->backward(PNeuralNet);
 	PNeuralNet->bwTime = GetTimestamp() - starTick;
-
 	PNeuralNet->trainning.batchCount++;
-	if (PNeuralNet->trainningParam.batch_size <= 0)
-		return;
+	/////////////////////////////////////////////////////////////////////////////////////
 	// 小批量阀值
+	if (PNeuralNet->trainningParam.batch_size <= 0)
+		PNeuralNet->trainningParam.batch_size = 15;
 	if (PNeuralNet->trainning.batchCount % PNeuralNet->trainningParam.batch_size != 0)
-	return;
-	////////////////////////////////////////////////////////////////////////////
+		return;
+	PNeuralNet->trainning.iterations++;
+	/////////////////////////////////////////////////////////////////////////////////////
 	////小批量梯度计算
 	starTick = GetTimestamp();
-	PNeuralNet->getParamsAndGrads(PNeuralNet);
+	PNeuralNet->getWeightAndGrads(PNeuralNet);
+	if (PNeuralNet->trainning.underflow)
+	{
+		PNeuralNet->trainning.trainningGoing = false;
+		LOGERROR("PNeuralNet->trainning.underflow = true");
+		return;
+	}
+	if (PNeuralNet->trainning.overflow)
+	{
+		PNeuralNet->trainning.trainningGoing = false;
+		LOGERROR("PNeuralNet->trainning.overflow = true");
+		return;
+	}
+	///////////////////////////////////////////////////////////////////
+	// LOGERROR("Debug:Stop");
+	// PNeuralNet->trainning.trainningGoing = false;
+	// return;
+	//////////////////////////////////////////////////////////////////
+	pResponseResults = PNeuralNet->trainning.pResponseResults;
+	if (pResponseResults == NULL)
+	{
+		LOGERROR("No ResponseResults! pResponseResults=NULL");
+		PNeuralNet->trainning.trainningGoing = false;
+		return;
+	}
 	if (PNeuralNet->trainning.responseCount <= 0)
 	{
 		LOGERROR("No ResponseResults! trainning.responseCount <= 0");
 		PNeuralNet->trainning.trainningGoing = false;
 		return;
 	}
-	pResponseResults = PNeuralNet->trainning.pResponseResults;
-	if (pResponseResults == NULL)
+	if (PNeuralNet->trainning.grads_sum1 == NULL || PNeuralNet->trainning.grads_sum_count <= 0)
 	{
-		LOGERROR("No ResponseResults! pResponseResults=NULL");
-		return;
-	}
-	if (PNeuralNet->trainning.gsum1 == NULL || PNeuralNet->trainning.gsumCount <= 0)
-	{
-		PNeuralNet->trainning.gsum1 = malloc(sizeof(TPTensor) * PNeuralNet->trainning.responseCount);
-		PNeuralNet->trainning.gsum2 = malloc(sizeof(TPTensor) * PNeuralNet->trainning.responseCount);
-
-		if (PNeuralNet->trainning.gsum1 == NULL || PNeuralNet->trainning.gsum2 == NULL)
+		PNeuralNet->trainning.grads_sum1 = malloc(sizeof(TPTensor) * PNeuralNet->trainning.responseCount);
+		PNeuralNet->trainning.grads_sum2 = malloc(sizeof(TPTensor) * PNeuralNet->trainning.responseCount);
+		PNeuralNet->trainning.grads_sum_count = PNeuralNet->trainning.responseCount;
+		if (PNeuralNet->trainning.grads_sum1 == NULL || PNeuralNet->trainning.grads_sum2 == NULL)
 		{
-			LOGERROR("No trainning.gsum1 or trainning.gsum2=NULL");
+			LOGERROR("No trainning.grads_sum1 or trainning.grads_sum2=NULL");
+			PNeuralNet->trainning.trainningGoing = false;
 			return;
 		}
 		for (uint16_t i = 0; i < PNeuralNet->trainning.responseCount; i++)
 		{
-			PNeuralNet->trainning.gsum1[i] = MakeTensor(pResponseResults[i]->filter->length);
-			PNeuralNet->trainning.gsum2[i] = MakeTensor(pResponseResults[i]->filter->length);
+			PNeuralNet->trainning.grads_sum1[i] = MakeTensor(pResponseResults[i]->filterWeight->length);
+			PNeuralNet->trainning.grads_sum2[i] = MakeTensor(pResponseResults[i]->filterWeight->length);
 		}
 	}
-
+	/////////////////////////////////////////////////////////////////////////////////////
 	for (uint16_t i = 0; i < PNeuralNet->trainning.responseCount; i++)
 	{
 		pResponse = pResponseResults[i];
-		weight = pResponse->filter;
+		weight = pResponse->filterWeight;
 		grads = pResponse->filterGrads;
+
 		if (weight->length <= 0 || grads->length <= 0)
 		{
 			LOGERROR("pResponse weight length <=0 ");
+			PNeuralNet->trainning.trainningGoing = false;
 			break;
 		}
-
-		if (PNeuralNet->trainning.gsum1 != NULL && PNeuralNet->trainning.gsum2 != NULL)
-		{
-			// tempPTensor1 = MakeTensor(pResponse->filter->length);
-			// tempPTensor2 = MakeTensor(pResponse->filter->length);
-			tempPTensor1 = PNeuralNet->trainning.gsum1[i];
-			tempPTensor2 = PNeuralNet->trainning.gsum2[i];
-		}
+		sumPTensor1 = PNeuralNet->trainning.grads_sum1[i];
+		sumPTensor2 = PNeuralNet->trainning.grads_sum2[i];
 
 		l1_decay = PNeuralNet->trainningParam.l1_decay * pResponse->l1_decay_mul;
 		l2_decay = PNeuralNet->trainningParam.l2_decay * pResponse->l2_decay_mul;
@@ -1968,37 +2068,58 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 				l1_decay_grad = l1_decay;
 			else
 				l1_decay_grad = -l1_decay;
-
 			l2_decay_grad = l2_decay * weight->buffer[j];
 
 			gradij = grads->buffer[j];
 			gradij = (l1_decay_grad + l2_decay_grad + gradij) / PNeuralNet->trainningParam.batch_size;
 
-			if (tempPTensor1 == NULL || tempPTensor2 == NULL)
+			if (sumPTensor1 == NULL || sumPTensor2 == NULL)
 			{
-				LOGERROR("tempPTensor1 or tempPTensor2=NULL");
+				LOGERROR("sumPTensor1 or sumPTensor2=NULL");
 				break;
 			}
 			switch (PNeuralNet->trainningParam.optimize_method)
 			{
 			case Optm_Adam:
-				tempPTensor1->buffer[j] = tempPTensor1->buffer[j] * PNeuralNet->trainningParam.beta1 + (1 - PNeuralNet->trainningParam.beta1) * gradij;
-				tempPTensor2->buffer[j] = tempPTensor1->buffer[j] * PNeuralNet->trainningParam.beta2 + (1 - PNeuralNet->trainningParam.beta2) * gradij * gradij;
+				sumPTensor1->buffer[j] = sumPTensor1->buffer[j] * PNeuralNet->trainningParam.beta1 + (1 - PNeuralNet->trainningParam.beta1) * gradij;
+				sumPTensor2->buffer[j] = sumPTensor1->buffer[j] * PNeuralNet->trainningParam.beta2 + (1 - PNeuralNet->trainningParam.beta2) * gradij * gradij;
 
-				bias1 = tempPTensor1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta1, PNeuralNet->trainning.batchCount));
-				bias2 = tempPTensor1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta2, PNeuralNet->trainning.batchCount));
+				bias1 = sumPTensor1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta1, PNeuralNet->trainning.batchCount));
+				bias2 = sumPTensor1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta2, PNeuralNet->trainning.batchCount));
 				dx = -PNeuralNet->trainningParam.learning_rate * bias1 / (sqrt(bias2) + PNeuralNet->trainningParam.eps);
 
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
-			case Optm_Adagrad:
-				tempPTensor1->buffer[j] = tempPTensor1->buffer[j] + gradij * gradij;
-				dx = -PNeuralNet->trainningParam.learning_rate / sqrt(tempPTensor1->buffer[j] + PNeuralNet->trainningParam.eps) * gradij;
+			case Optm_Adagrad:			
+				temp = sumPTensor1->buffer[j] + gradij * gradij;
+				sumPTensor1->buffer[j] = temp;
+				dx = -PNeuralNet->trainningParam.learning_rate / sqrt(sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps) * gradij;
 				weight->buffer[j] = weight->buffer[j] + dx;
+
+				if (IsFloatOverflow(temp))
+				{
+					LOGERROR("temp float overflow!!");
+					PNeuralNet->trainning.trainningGoing = false;
+					break;
+				}
+				if (IsFloatOverflow(dx))
+				{
+					LOGERROR("dx float overflow!!");
+					PNeuralNet->trainning.trainningGoing = false;
+					break;
+				}
+
+				if (IsFloatOverflow(weight->buffer[j]))
+				{
+					LOGERROR("dx float overflow!!");
+					PNeuralNet->trainning.trainningGoing = false;
+					break;
+				}
 				break;
 			default:
 				break;
 			}
+			grads->buffer[j] = 0;
 		}
 	}
 
@@ -2016,6 +2137,13 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	PNeuralNet->optimTime = GetTimestamp() - starTick;
 }
 
+
+void NeuralNetPredict(TPNeuralNet PNeuralNet, TPVolume PVolume)
+{
+	/////////////////////////////////////////////////////////////////////////////////////
+	PNeuralNet->forward(PNeuralNet, PVolume);
+	PNeuralNet->getCostLoss(PNeuralNet);	
+}
 /// @brief ///////////////////////////////////////////////////////////////////////
 /// @param PNeuralNet
 void NeuralNetSave(TPNeuralNet PNeuralNet)
@@ -2031,18 +2159,24 @@ char *NeuralNetGetName(TLayerType LayerType)
 	return CNNTypeName[LayerType];
 }
 
-TPNeuralNet CreateNeuralNetCNN()
+TPNeuralNet NeuralNetCNNCreate()
 {
 	TPNeuralNet PNeuralNet = malloc(sizeof(TNeuralNet));
+	if (PNeuralNet == NULL)
+	{
+		LOGERROR("PNeuralNet==NULL!");
+		return NULL;
+	}
 	PNeuralNet->init = NeuralNetInit;
 	PNeuralNet->free = NeuralNetFree;
 	PNeuralNet->forward = NeuralNetForward;
 	PNeuralNet->backward = NeuralNetBackward;
-	PNeuralNet->getParamsAndGrads = NeuralNetGetParamsAndGrads;
+	PNeuralNet->getWeightAndGrads = NeuralNetGetWeightsAndGrads;
 	PNeuralNet->getCostLoss = NeuralNetComputeCostLoss;
 	PNeuralNet->getPredictions = NeuralNetUpdatePrediction;
 	PNeuralNet->getMaxPrediction = NeuralNetGetMaxPrediction;
 	PNeuralNet->train = NeuralNetTrain;
+	PNeuralNet->predict = NeuralNetPredict;
 	PNeuralNet->save = NeuralNetSave;
 	PNeuralNet->load = NeuralNetLoad;
 	PNeuralNet->printGradients = NeuralNetPrintGradients;
