@@ -4,6 +4,7 @@ The Convolutional Neural Network is a popular and effective architecture for ima
 Through this project allowing users to train and deploy their own deep learning models.
 
 Key features of the project include:
+
 Cross-platform: This project can be compiled on different platforms, such as windows linux android stm32 embedded platforms.
 
 Customizable CNN architecture: The framework provides flexibility in defining the layers, such as convolutional layers,active layer, pooling layers, fully connected layers,and softmax layer and so on,
