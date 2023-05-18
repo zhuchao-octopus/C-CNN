@@ -33,6 +33,9 @@
 #define PRINTFLAG_GRADS 1
 #define PRINTFLAG_FORMAT "%9.6f"
 
+#define NEURALNET_CNN_WEIGHT_FILE_NAME "CNN.W"
+
+
 #define PLATFORM_WINDOWS
 // #define PLATFORM_STM32
 #define __DEBUG__LOG__
@@ -403,13 +406,12 @@ typedef struct ANN_CNN_NeuralNet
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-void FillZero(TPTensor PTensor);
-void FillGauss(TPTensor PTensor);
-TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber);
+void TensorFillZero(TPTensor PTensor);
+void TensorFillGauss(TPTensor PTensor);
+void TensorSave(FILE* pFile, TPTensor PTensor);
 TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth);
-void FreeFilterVolumes(TPFilters PFilters);
-void InitVolume(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias);
-void FreeVolume(TPVolume PVolume);
+void VolumeInit(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias);
+void VolumeFree(TPVolume PVolume);
 void VolumeSetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
 void VolumeAddValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
 float32_t VolumeGetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth);
@@ -417,7 +419,8 @@ void VolumeSetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth
 void VolumeAddGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
 float32_t VolumeGetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth);
 void VolumePrint(TPVolume PVolume, uint8_t wg);
-char *NeuralNetGetName(TLayerType LayerType);
+TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber);
+void FilterVolumesFree(TPFilters PFilters);
 
 DLLEXPORT void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption);
 DLLEXPORT void NeuralNetFree(TPNeuralNet PNeuralNet);
@@ -442,4 +445,5 @@ DLLEXPORT void NeuralNetCNNPrintNetInformation(void);
 DLLEXPORT void NeuralNetCNNPrintLayerInfor(void);
 DLLEXPORT void testDSPFloatProcess(float32_t f1, float32_t f2);
 DLLEXPORT time_t GetTimestamp(void);
+DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 #endif /* _INC_ANN_CNN_H_ */

@@ -349,7 +349,7 @@ void NeuralNetCNNInitLeaningParameter(void)
 		return;
 	}
 	PNeuralNetCNN->trainningParam.data_type = Cifar10;
-	PNeuralNetCNN->trainningParam.optimize_method = Optm_Adagrad;
+	PNeuralNetCNN->trainningParam.optimize_method = Optm_Adadelta;
 	PNeuralNetCNN->trainningParam.batch_size = 10;
 	PNeuralNetCNN->trainningParam.l1_decay = 0;
 	PNeuralNetCNN->trainningParam.l2_decay = 0.0001;
@@ -357,7 +357,7 @@ void NeuralNetCNNInitLeaningParameter(void)
 	PNeuralNetCNN->trainningParam.beta2 = 0.999;
 	PNeuralNetCNN->trainningParam.eps = 0.0000001;
 	PNeuralNetCNN->trainningParam.learning_rate = 0.005;
-	PNeuralNetCNN->trainningParam.momentum = 0.9;
+	PNeuralNetCNN->trainningParam.momentum = 0.90;
 	PNeuralNetCNN->trainningParam.bias = 0.1;
 	////////////////////////////////////////////////////
 	PNeuralNetCNN->trainning.trinning_dataset_index = 0;

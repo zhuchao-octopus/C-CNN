@@ -26,23 +26,24 @@ int main()
 	while (true)
 	{
 		printf("\n");
-		printf("\nplease select a menu item to continue...\n");
+		printf("please select a menu item to continue...\n");
 		printf("0: Exit.\n");
-		printf("1: Print weight,two parameters, the first is the command number and the second is the network layer index.\n");
+		printf("1: Print weight usage:2 10,two parameters,the first is the command number and the second is the network layer index.\n");
 		printf("2: Print gradients usage same as print weight.\n");
 		printf("3: Print neural network information,displays the network structure information.\n");
 
-		printf("4: Start trainning one by one,learn one cifar-10 picture at a time.\n");
-		printf("5: Start trainning by batch,learn a batch cifar-10 picture at a time.\n");
-		printf("6: Start trainning without saving weights,learning of the cifar-10 50,000 images do not save weights.\n");
-		printf("7: Start trainning and saving weights,learning of the cifar-10 50,000 images and save weights to file cifar10.w.\n");
+		printf("4: Start trainning one by one,learn one CIFAR-10 picture at a time.\n");
+		printf("5: Start trainning by batch,learn a batch CIFAR-10 picture at a time.\n");
+		printf("6: Start trainning without saving weights,learning of the CIFAR-10 50,000 images do not save weights.\n");
+		printf("7: Start trainning and saving weights,learning of the CIFAR-10 50,000 images and save weights to file cnn.w.\n");
 		
-		printf("8: Load  weights from file cifar10.w\n");
+		printf("8: Save weights to   file cnn.w\n");
+		printf("9: Load weights from file cnn.w\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(str);
 		sscanf(str, "%d %d", &cmd, &layer);
-		printf("cmd=%d layer=%d\n", cmd, layer);
+		printf("your choose command=%d layer=%d\n", cmd, layer);
 
 		switch (cmd)
 		{
@@ -100,10 +101,16 @@ int main()
 		case 8:
 			if (PNeuralNetCNN != NULL)
 			{
-				PNeuralNetCNN->load(PNeuralNetCNN);
+				LOGINFO("NeuralNet saving...");
+				PNeuralNetCNN->save(PNeuralNetCNN);
 			}
 			break;
 		case 9:
+			if (PNeuralNetCNN != NULL)
+			{
+				LOGINFO("NeuralNet loading...");
+				PNeuralNetCNN->load(PNeuralNetCNN);
+			}
 			break;
 		default:
 			printf("\n");

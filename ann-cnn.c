@@ -22,45 +22,47 @@ void testDSPFloatProcess(float32_t f1, float32_t f2)
 
 time_t GetTimestamp(void)
 {
-	clock_t t = clock();
-	int tick = t * 1000 / CLOCKS_PER_SEC;
+	time_t t = clock();
+	time_t tick = t * 1000 / CLOCKS_PER_SEC;
 	return tick;
 	//return time(NULL);
 }
 
-double GaussRandom2(void)
+float32_t GenerateGaussRandom(void)
 {
-	static double n2 = 0.0;
-	static int n2_cached = 0;
-	double d;
-
-	if (!n2_cached)
+	float32_t c, u, v, r;
+	static bool return_v = false;
+	static float32_t v_val;
+	c = 0;
+	if (return_v)
 	{
-		double x, y, r;
-		do
-		{
-			x = 2.0 * rand() / RAND_MAX - 1;
-			y = 2.0 * rand() / RAND_MAX - 1;
-			r = x * x + y * y;
-		} while (r >= 1.0 || r == 0.0);
+		return_v = false;
+		return v_val;
+	}
 #ifdef PLATFORM_STM32
-		arm_sqrt_f32(-2 * log10(r) / r, &d);
+	u = 2 * random() - 1;
+	v = 2 * random() - 1;
 #else
-		d = sqrt(-2.0 * log(r) / r);
+	u = 2 * rand() - 1;
+	v = 2 * rand() - 1;
 #endif
-
-		double n1 = x * d;
-		n2 = y * d;
-		n2_cached = 1;
-		return n1;
-	}
-	else
+	r = u * u + v * v;
+	if ((r == 0) || (r > 1))
 	{
-		n2_cached = 0;
-		return n2;
+		return GenerateGaussRandom();
 	}
+
+#ifdef PLATFORM_STM32
+	arm_sqrt_f32(-2 * log10(r) / r, &c);
+#else
+	c = sqrt(-2 * log10(r) / r);
+#endif
+	v_val = v * c;
+	return_v = true;
+	return u * c;
 }
-float32_t GaussRandom1(void)
+
+float32_t GenerateGaussRandom1(void)
 {
 	static float32_t v1, v2, s;
 	static int start = 0;
@@ -85,39 +87,36 @@ float32_t GaussRandom1(void)
 	start = 1 - start;
 	return x;
 }
-float32_t GaussRandom(void)
+
+double GenerateGaussRandom2(void)
 {
-	float32_t c, u, v, r;
-	static bool return_v = false;
-	static float32_t v_val;
-	c = 0;
-	if (return_v)
+	static double n2 = 0.0;
+	static int n2_cached = 0;
+	double d;
+	if (!n2_cached)
 	{
-		return_v = false;
-		return v_val;
-	}
+		double x, y, r;
+		do
+		{
+			x = 2.0 * rand() / RAND_MAX - 1;
+			y = 2.0 * rand() / RAND_MAX - 1;
+			r = x * x + y * y;
+		} while (r >= 1.0 || r == 0.0);
 #ifdef PLATFORM_STM32
-	u = 2 * random() - 1;
-	v = 2 * random() - 1;
+		arm_sqrt_f32(-2 * log10(r) / r, &d);
 #else
-	u = 2 * rand() - 1;
-	v = 2 * rand() - 1;
+		d = sqrt(-2.0 * log(r) / r);
 #endif
-	r = u * u + v * v;
-	if ((r == 0) || (r > 1))
+		double n1 = x * d;
+		n2 = y * d;
+		n2_cached = 1;
+		return n1;
+	}
+	else
 	{
-		return GaussRandom();
+		n2_cached = 0;
+		return n2;
 	}
-
-#ifdef PLATFORM_STM32
-	arm_sqrt_f32(-2 * log10(r) / r, &c);
-#else
-	c = sqrt(-2 * log10(r) / r);
-#endif
-
-	v_val = v * c;
-	return_v = true;
-	return u * c;
 }
 
 // 生成高斯分布随机数序列期望为μ、方差为σ2=Variance
@@ -126,7 +125,7 @@ float32_t GaussRandom(void)
 // 当μ = 0,σ = 1时的正态分布是标准正态分布。
 float32_t NeuralNet_GetGaussRandom(double mul, float32_t Variance)
 {
-	return mul + GaussRandom2() * Variance;
+	return mul + GenerateGaussRandom2() * Variance;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,20 +143,20 @@ TPTensor MakeTensor(uint32_t Length)
 	return tPTensor;
 }
 
-void InitTensor(TPTensor PTensor, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
+void TensorInit(TPTensor PTensor, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
 {
 	uint32_t n = W * H * Depth;
 	PTensor = MakeTensor(n);
-	FillZero(PTensor);
+	TensorFillZero(PTensor);
 }
 
-void FillZero(TPTensor PTensor)
+void TensorFillZero(TPTensor PTensor)
 {
 	if (PTensor->length > 0)
 		memset(PTensor->buffer, 0, PTensor->length * sizeof(float32_t));
 }
 
-void FillWith(TPTensor PTensor, float32_t Bias)
+void TensorFillWith(TPTensor PTensor, float32_t Bias)
 {
 	for (int i = 0; i < PTensor->length; i++)
 	{
@@ -165,7 +164,7 @@ void FillWith(TPTensor PTensor, float32_t Bias)
 	}
 }
 
-void FillGauss(TPTensor PTensor)
+void TensorFillGauss(TPTensor PTensor)
 {
 	float32_t scale = 0;
 #ifdef PLATFORM_STM32
@@ -181,7 +180,7 @@ void FillGauss(TPTensor PTensor)
 	}
 }
 
-void FreeTensor(TPTensor PTensor)
+void TensorFree(TPTensor PTensor)
 {
 	if (PTensor != NULL)
 	{
@@ -190,6 +189,28 @@ void FreeTensor(TPTensor PTensor)
 		free(PTensor);
 		PTensor = NULL;
 	}
+}
+
+void TensorSave(FILE* pFile, TPTensor PTensor)
+{
+	if (pFile == NULL)
+	{
+		LOG("Error opening file NULL");
+		return ;
+	}
+	if(PTensor->buffer != NULL && PTensor->length > 0)
+	fwrite(PTensor->buffer, 1, sizeof(float32_t)* PTensor->length, pFile);
+}
+
+void TensorRead(FILE* pFile, TPTensor PTensor)
+{
+	if (pFile == NULL)
+	{
+		LOG("Error opening file NULL");
+		return;
+	}
+	if (PTensor->buffer != NULL && PTensor->length > 0)
+		fread(PTensor->buffer, 1, sizeof(float32_t) * PTensor->length, pFile);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,10 +223,10 @@ TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth)
 		tPVolume->_w = W;
 		tPVolume->_h = H;
 		tPVolume->_depth = Depth;
-		tPVolume->init = InitVolume;
-		tPVolume->free = FreeTensor;
-		tPVolume->fillZero = FillZero;
-		tPVolume->fillGauss = FillGauss;
+		tPVolume->init = VolumeInit;
+		tPVolume->free = TensorFree;
+		tPVolume->fillZero = TensorFillZero;
+		tPVolume->fillGauss = TensorFillGauss;
 		tPVolume->setValue = VolumeSetValue;
 		tPVolume->getValue = VolumeGetValue;
 		tPVolume->addValue = VolumeAddValue;
@@ -217,104 +238,29 @@ TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth)
 	return tPVolume;
 }
 
-void InitVolume(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
+void VolumeInit(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
 {
 	PVolume->_w = W;
 	PVolume->_h = H;
 	PVolume->_depth = Depth;
-	int n = PVolume->_w * PVolume->_h * PVolume->_depth;
+	uint32_t n = PVolume->_w * PVolume->_h * PVolume->_depth;
 	PVolume->weight = MakeTensor(n);
 	PVolume->weight_d = MakeTensor(n);
-	// FillZero(PVolume->weight);
-	// FillZero(PVolume->weight_grad);
-	FillWith(PVolume->weight, Bias);
-	FillWith(PVolume->weight_d, Bias);
+	// TensorFillZero(PVolume->weight);
+	// TensorFillZero(PVolume->weight_grad);
+	TensorFillWith(PVolume->weight, Bias);
+	TensorFillWith(PVolume->weight_d, Bias);
 }
 
-void FreeVolume(TPVolume PVolume)
+void VolumeFree(TPVolume PVolume)
 {
 	if (PVolume != NULL)
 	{
-		FreeTensor(PVolume->weight);
-		FreeTensor(PVolume->weight_d);
+		TensorFree(PVolume->weight);
+		TensorFree(PVolume->weight_d);
 		free(PVolume);
 	}
 	PVolume = NULL;
-}
-
-TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber)
-{
-	TPFilters tPFilters = malloc(sizeof(TFilters));
-	if (tPFilters != NULL)
-	{
-		tPFilters->_w = W;
-		tPFilters->_h = H;
-		tPFilters->_depth = Depth;
-		tPFilters->filterNumber = FilterNumber;
-		tPFilters->volumes = malloc(sizeof(TPVolume) * tPFilters->filterNumber);
-		if (tPFilters->volumes == NULL)
-		{
-			LOGERROR("tPFilters->volumes==NULL! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
-			return NULL;
-		}
-		for (uint16_t i = 0; i < tPFilters->filterNumber; i++)
-		{
-			tPFilters->volumes[i] = MakeVolume(tPFilters->_w, tPFilters->_w, tPFilters->_depth);
-		}
-		tPFilters->init = InitVolume;
-		tPFilters->free = FreeFilterVolumes;
-	}
-	return tPFilters;
-}
-
-bool ResizeFilters(TPFilters PFilters, uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber)
-{
-	if (W <= 0 || H <= 0 || Depth <= 0 || FilterNumber <= 0)
-	{
-		LOGERROR("Resize Filters failed! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
-		return false;
-	}
-	if (PFilters != NULL)
-	{
-		PFilters->_w = W;
-		PFilters->_h = H;
-		PFilters->_depth = Depth;
-		PFilters->filterNumber = FilterNumber;
-		PFilters->free(PFilters);
-		PFilters->volumes = malloc(sizeof(TPVolume) * PFilters->filterNumber);
-		for (uint16_t i = 0; i < PFilters->filterNumber; i++)
-		{
-			PFilters->volumes[i] = MakeVolume(PFilters->_w, PFilters->_w, PFilters->_depth);
-		}
-		PFilters->init = InitVolume;
-		PFilters->free = FreeFilterVolumes;
-	}
-	return true;
-}
-
-void FreeFilters(TPFilters PFilters)
-{
-	if (PFilters != NULL)
-	{
-		for (uint16_t d = 0; d < PFilters->filterNumber; d++)
-		{
-			FreeVolume(PFilters->volumes[d]);
-		}
-		free(PFilters);
-		PFilters = NULL;
-	}
-}
-
-void FreeFilterVolumes(TPFilters PFilters)
-{
-	if (PFilters != NULL)
-	{
-		for (uint16_t d = 0; d < PFilters->filterNumber; d++)
-		{
-			FreeVolume(PFilters->volumes[d]);
-		}
-		PFilters->volumes = NULL;
-	}
 }
 
 void VolumeSetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
@@ -351,6 +297,81 @@ float32_t VolumeGetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t 
 {
 	uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
 	return PVolume->weight_d->buffer[index];
+}
+
+TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber)
+{
+	TPFilters tPFilters = malloc(sizeof(TFilters));
+	if (tPFilters != NULL)
+	{
+		tPFilters->_w = W;
+		tPFilters->_h = H;
+		tPFilters->_depth = Depth;
+		tPFilters->filterNumber = FilterNumber;
+		tPFilters->volumes = malloc(sizeof(TPVolume) * tPFilters->filterNumber);
+		if (tPFilters->volumes == NULL)
+		{
+			LOGERROR("tPFilters->volumes==NULL! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
+			return NULL;
+		}
+		for (uint16_t i = 0; i < tPFilters->filterNumber; i++)
+		{
+			tPFilters->volumes[i] = MakeVolume(tPFilters->_w, tPFilters->_w, tPFilters->_depth);
+		}
+		tPFilters->init = VolumeInit;
+		tPFilters->free = FilterVolumesFree;
+	}
+	return tPFilters;
+}
+
+bool FiltersResize(TPFilters PFilters, uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber)
+{
+	if (W <= 0 || H <= 0 || Depth <= 0 || FilterNumber <= 0)
+	{
+		LOGERROR("Resize Filters failed! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
+		return false;
+	}
+	if (PFilters != NULL)
+	{
+		PFilters->_w = W;
+		PFilters->_h = H;
+		PFilters->_depth = Depth;
+		PFilters->filterNumber = FilterNumber;
+		PFilters->free(PFilters);
+		PFilters->volumes = malloc(sizeof(TPVolume) * PFilters->filterNumber);
+		for (uint16_t i = 0; i < PFilters->filterNumber; i++)
+		{
+			PFilters->volumes[i] = MakeVolume(PFilters->_w, PFilters->_w, PFilters->_depth);
+		}
+		PFilters->init = VolumeInit;
+		PFilters->free = FilterVolumesFree;
+	}
+	return true;
+}
+
+void FiltersFree(TPFilters PFilters)
+{
+	if (PFilters != NULL)
+	{
+		for (uint16_t d = 0; d < PFilters->filterNumber; d++)
+		{
+			VolumeFree(PFilters->volumes[d]);
+		}
+		free(PFilters);
+		PFilters = NULL;
+	}
+}
+
+void FilterVolumesFree(TPFilters PFilters)
+{
+	if (PFilters != NULL)
+	{
+		for (uint16_t d = 0; d < PFilters->filterNumber; d++)
+		{
+			VolumeFree(PFilters->volumes[d]);
+		}
+		PFilters->volumes = NULL;
+	}
 }
 /// @brief ////////////////////////////////////////////////////////////
 /// @param PVolume
@@ -408,6 +429,8 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
 	if (PVolume->_h == 1 && PVolume->_w == 1)
 		LOG("\n");
 }
+////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
 /// @brief /////////////////////////////////////////////////////////////////////////////
 /// @param PInputLayer
 /// @param PLayerOption
@@ -435,7 +458,7 @@ void InputLayerForward(TPInputLayer PInputLayer, TPVolume PVolume)
 	}
 	if (PInputLayer->layer.in_v != NULL)
 	{
-		FreeVolume(PInputLayer->layer.in_v);
+		VolumeFree(PInputLayer->layer.in_v);
 	}
 	PInputLayer->layer.in_w = PVolume->_w;
 	PInputLayer->layer.in_h = PVolume->_h;
@@ -453,8 +476,8 @@ void InputLayerBackward(TPInputLayer PInputLayer)
 }
 void InputLayerFree(TPInputLayer PInputLayer)
 {
-	FreeVolume(PInputLayer->layer.in_v);
-	FreeVolume(PInputLayer->layer.out_v);
+	VolumeFree(PInputLayer->layer.in_v);
+	VolumeFree(PInputLayer->layer.out_v);
 }
 void MatrixMultip(TPTensor PInTenser, TPTensor PFilter, TPTensor out)
 {
@@ -521,8 +544,8 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
 	if (PConvLayer->layer.out_w != out_w || PConvLayer->layer.out_h != out_h || PConvLayer->filters->_depth != filter_depth)
 	{
 		LOGINFO("ConvLayer resize out_v from %d x %d to %d x %d", PConvLayer->layer.out_w, PConvLayer->layer.out_h, out_w, out_h);
-		FreeFilters(PConvLayer->filters);
-		bool ret = ResizeFilters(PConvLayer->filters, PConvLayer->filters->_w, PConvLayer->filters->_h, filter_depth, PConvLayer->filters->filterNumber);
+		FiltersFree(PConvLayer->filters);
+		bool ret = FiltersResize(PConvLayer->filters, PConvLayer->filters->_w, PConvLayer->filters->_h, filter_depth, PConvLayer->filters->filterNumber);
 		if (!ret)
 			LOGERROR("Resize Filters failed! W=%d H=%d Depth=%d FilterNumber=%d", PConvLayer->filters->_w, PConvLayer->filters->_h, filter_depth, PConvLayer->filters->filterNumber);
 
@@ -530,7 +553,7 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
 		PConvLayer->layer.out_h = out_h;
 		if (PConvLayer->layer.out_v != NULL)
 		{
-			FreeVolume(PConvLayer->layer.out_v);
+			VolumeFree(PConvLayer->layer.out_v);
 		}
 		PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
 		PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
@@ -663,8 +686,8 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 			PResponse->filterGrads = PConvLayer->filters->volumes[out_d]->weight_d;
 			PResponse->l1_decay_mul = PConvLayer->l1_decay_mul;
 			PResponse->l2_decay_mul = PConvLayer->l2_decay_mul;
-			PResponse->fillZero = FillZero;
-			PResponse->free = FreeTensor;
+			PResponse->fillZero = TensorFillZero;
+			PResponse->free = TensorFree;
 			tPResponses[out_d] = PResponse;
 		}
 	}
@@ -676,8 +699,8 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 		PResponse->filterGrads = PConvLayer->biases->weight_d;
 		PResponse->l1_decay_mul = 0;
 		PResponse->l2_decay_mul = 0;
-		PResponse->fillZero = FillZero;
-		PResponse->free = FreeTensor;
+		PResponse->fillZero = TensorFillZero;
+		PResponse->free = TensorFree;
 		tPResponses[PConvLayer->layer.out_depth] = PResponse;
 	}
 	return tPResponses;
@@ -690,10 +713,10 @@ float32_t ConvolutionLayerBackwardLoss(TPConvLayer PConvLayer, int Y)
 
 void ConvolutionLayerFree(TPConvLayer PConvLayer)
 {
-	FreeVolume(PConvLayer->layer.in_v);
-	FreeVolume(PConvLayer->layer.out_v);
-	FreeVolume(PConvLayer->biases);
-	FreeFilters(PConvLayer->filters);
+	VolumeFree(PConvLayer->layer.in_v);
+	VolumeFree(PConvLayer->layer.out_v);
+	VolumeFree(PConvLayer->biases);
+	FiltersFree(PConvLayer->filters);
 
 	// for (uint16_t i = 0; i < PConvLayer->filters->_depth; i++)
 	//{
@@ -743,7 +766,7 @@ void reluLayerOutResize(TPReluLayer PReluLayer)
 		PReluLayer->layer.out_depth = PReluLayer->layer.in_depth;
 		if (PReluLayer->layer.out_v != NULL)
 		{
-			FreeVolume(PReluLayer->layer.out_v);
+			VolumeFree(PReluLayer->layer.out_v);
 		}
 		PReluLayer->layer.out_v = MakeVolume(PReluLayer->layer.out_w, PReluLayer->layer.out_h, PReluLayer->layer.out_depth);
 		PReluLayer->layer.out_v->init(PReluLayer->layer.out_v, PReluLayer->layer.out_w, PReluLayer->layer.out_h, PReluLayer->layer.out_depth, 0);
@@ -843,9 +866,9 @@ void poolLayerOutResize(TPPoolLayer PPoolLayer)
 		PPoolLayer->layer.out_depth = PPoolLayer->layer.in_depth;
 		if (PPoolLayer->layer.out_v != NULL)
 		{
-			FreeVolume(PPoolLayer->layer.out_v);
-			FreeVolume(PPoolLayer->switchxy);
-			// FreeVolume(PPoolLayer->switchy);
+			VolumeFree(PPoolLayer->layer.out_v);
+			VolumeFree(PPoolLayer->switchxy);
+			// VolumeFree(PPoolLayer->switchy);
 		}
 		PPoolLayer->layer.out_v = MakeVolume(PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth);
 		PPoolLayer->layer.out_v->init(PPoolLayer->layer.out_v, PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, 0);
@@ -950,10 +973,10 @@ float32_t PoolLayerBackwardLoss(TPPoolLayer PPoolLayer, int Y)
 
 void PoolLayerFree(TPPoolLayer PPoolLayer)
 {
-	FreeVolume(PPoolLayer->layer.in_v);
-	FreeVolume(PPoolLayer->layer.out_v);
-	FreeVolume(PPoolLayer->switchxy);
-	// FreeVolume(PPoolLayer->switchy);
+	VolumeFree(PPoolLayer->layer.in_v);
+	VolumeFree(PPoolLayer->layer.out_v);
+	VolumeFree(PPoolLayer->switchxy);
+	// VolumeFree(PPoolLayer->switchy);
 	free(PPoolLayer);
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1011,8 +1034,8 @@ void fullConnLayerOutResize(TPFullyConnLayer PFullyConnLayer)
 	if (PFullyConnLayer->filters->_depth != inputLength)
 	{
 		LOGINFO("FullyConnLayer resize filters from %d x %d x %d to %d x %d x %d", PFullyConnLayer->filters->_w, PFullyConnLayer->filters->_h, PFullyConnLayer->filters->_depth, PFullyConnLayer->filters->_w, PFullyConnLayer->filters->_h, inputLength);
-		FreeFilters(PFullyConnLayer->filters);
-		bool ret = ResizeFilters(PFullyConnLayer->filters, PFullyConnLayer->filters->_w, PFullyConnLayer->filters->_h, inputLength, PFullyConnLayer->filters->filterNumber);
+		FiltersFree(PFullyConnLayer->filters);
+		bool ret = FiltersResize(PFullyConnLayer->filters, PFullyConnLayer->filters->_w, PFullyConnLayer->filters->_h, inputLength, PFullyConnLayer->filters->filterNumber);
 		if (ret)
 		{
 			for (uint16_t i = 0; i < PFullyConnLayer->filters->filterNumber; i++)
@@ -1099,8 +1122,8 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 			PResponse->filterGrads = PFullyConnLayer->filters->volumes[out_d]->weight_d;
 			PResponse->l1_decay_mul = PFullyConnLayer->l1_decay_mul;
 			PResponse->l2_decay_mul = PFullyConnLayer->l2_decay_mul;
-			PResponse->fillZero = FillZero;
-			PResponse->free = FreeTensor;
+			PResponse->fillZero = TensorFillZero;
+			PResponse->free = TensorFree;
 			tPResponses[out_d] = PResponse;
 		}
 	}
@@ -1111,8 +1134,8 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 		PResponse->filterGrads = PFullyConnLayer->biases->weight_d;
 		PResponse->l1_decay_mul = 0;
 		PResponse->l2_decay_mul = 0;
-		PResponse->fillZero = FillZero;
-		PResponse->free = FreeTensor;
+		PResponse->fillZero = TensorFillZero;
+		PResponse->free = TensorFree;
 		tPResponses[PFullyConnLayer->layer.out_depth] = PResponse;
 	}
 	return tPResponses;
@@ -1120,10 +1143,10 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 
 void FullyConnLayerFree(TPFullyConnLayer PFullyConnLayer)
 {
-	FreeVolume(PFullyConnLayer->layer.in_v);
-	FreeVolume(PFullyConnLayer->layer.out_v);
-	FreeVolume(PFullyConnLayer->biases);
-	FreeFilters(PFullyConnLayer->filters);
+	VolumeFree(PFullyConnLayer->layer.in_v);
+	VolumeFree(PFullyConnLayer->layer.out_v);
+	VolumeFree(PFullyConnLayer->biases);
+	FiltersFree(PFullyConnLayer->filters);
 	// for (uint16_t i = 0; i < PFullyConnLayer->filters->_depth; i++)
 	//{
 	//	PFullyConnLayer->filters->free(PFullyConnLayer->filters->volumes[i]);
@@ -1168,8 +1191,8 @@ void softmaxLayOutResize(TPSoftmaxLayer PSoftmaxLayer)
 
 		if (PSoftmaxLayer->layer.out_v != NULL)
 		{
-			FreeVolume(PSoftmaxLayer->layer.out_v);
-			FreeTensor(PSoftmaxLayer->exp);
+			VolumeFree(PSoftmaxLayer->layer.out_v);
+			TensorFree(PSoftmaxLayer->exp);
 		}
 		PSoftmaxLayer->layer.out_v = MakeVolume(PSoftmaxLayer->layer.out_w, PSoftmaxLayer->layer.out_h, PSoftmaxLayer->layer.out_depth);
 		PSoftmaxLayer->layer.out_v->init(PSoftmaxLayer->layer.out_v, PSoftmaxLayer->layer.out_w, PSoftmaxLayer->layer.out_h, PSoftmaxLayer->layer.out_depth, 0);
@@ -1251,8 +1274,8 @@ float32_t SoftmaxLayerBackwardLoss(TPSoftmaxLayer PSoftmaxLayer)
 
 void SoftmaxLayerFree(TPSoftmaxLayer PSoftmaxLayer)
 {
-	FreeVolume(PSoftmaxLayer->layer.in_v);
-	FreeVolume(PSoftmaxLayer->layer.out_v);
+	VolumeFree(PSoftmaxLayer->layer.in_v);
+	VolumeFree(PSoftmaxLayer->layer.out_v);
 	free(PSoftmaxLayer);
 }
 
@@ -1610,13 +1633,13 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 				}
 			}
 			if (PNeuralNet->trainning.underflow)
-				LOGERROR("filterGrads underflow %s %d", NeuralNetGetName(Layer_Type_Convolution), layerIndex);
+				LOGERROR("filterGrads underflow %s %d", NeuralNetGetLayerName(Layer_Type_Convolution), layerIndex);
 			if (PNeuralNet->trainning.overflow)
 			{
 				if (grads_flow)
-					LOGERROR("filterGrads overflow %s %d", NeuralNetGetName(Layer_Type_Convolution), layerIndex);
+					LOGERROR("filterGrads overflow %s %d", NeuralNetGetLayerName(Layer_Type_Convolution), layerIndex);
 				if (weight_flow)
-					LOGERROR("filterWeight overflow %s %d", NeuralNetGetName(Layer_Type_Convolution), layerIndex);
+					LOGERROR("filterWeight overflow %s %d", NeuralNetGetLayerName(Layer_Type_Convolution), layerIndex);
 			}
 			free(pResponseResult);
 			break;
@@ -1667,13 +1690,13 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 			}
 
 			if (PNeuralNet->trainning.underflow)
-				LOGERROR("filterGrads underflow %s %d", NeuralNetGetName(Layer_Type_FullyConnection), layerIndex);
+				LOGERROR("filterGrads underflow %s %d", NeuralNetGetLayerName(Layer_Type_FullyConnection), layerIndex);
 			if (PNeuralNet->trainning.overflow)
 			{
 				if (grads_flow)
-					LOGERROR("filterGrads overflow %s %d", NeuralNetGetName(Layer_Type_FullyConnection), layerIndex);
+					LOGERROR("filterGrads overflow %s %d", NeuralNetGetLayerName(Layer_Type_FullyConnection), layerIndex);
 				if (weight_flow)
-					LOGERROR("filterWeight overflow %s %d", NeuralNetGetName(Layer_Type_FullyConnection), layerIndex);
+					LOGERROR("filterWeight overflow %s %d", NeuralNetGetLayerName(Layer_Type_FullyConnection), layerIndex);
 			}
 			free(pResponseResult);
 			break;
@@ -1938,11 +1961,11 @@ void NeuralNetPrintTrainningInfo(TPNeuralNet PNeuralNet)
 			PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
 			PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
 
-	uint16_t avg_iterations_time = 0;
+	time_t avg_iterations_time = 0;
     if(PNeuralNet->trainning.iterations > 0)
 	  avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
 
-	LOGINFO("TotalTime:%ld ForwardTime:%3ld BackwardTime:%3ld OptimTime:%3ld AvgBatchTime:%3ld AvgSampleTime:%3ld",
+	LOGINFO("TotalTime:%lld ForwardTime:%03lld BackwardTime:%03lld OptimTime:%03lld AvgBatchTime:%03lld AvgSampleTime:%03lld",
 		    PNeuralNet->totalTime,
 			PNeuralNet->fwTime,
 			PNeuralNet->bwTime,
@@ -1970,7 +1993,7 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	sumPTensor2 = NULL;
 	float32_t l1_decay_loss = 0;
 	float32_t l2_decay_loss = 0;
-	uint32_t starTick = 0;
+	time_t starTick = 0;
 
 	/////////////////////////////////////////////////////////////////////////////////////
 	PNeuralNet->optimTime = 0;
@@ -2095,30 +2118,16 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 				sumPTensor1->buffer[j] = temp;
 				dx = -PNeuralNet->trainningParam.learning_rate / sqrt(sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps) * gradij;
 				weight->buffer[j] = weight->buffer[j] + dx;
-
-				if (IsFloatOverflow(temp))
-				{
-					LOGERROR("temp float overflow!!");
-					PNeuralNet->trainning.trainningGoing = false;
-					break;
-				}
-				if (IsFloatOverflow(dx))
-				{
-					LOGERROR("dx float overflow!!");
-					PNeuralNet->trainning.trainningGoing = false;
-					break;
-				}
-
-				if (IsFloatOverflow(weight->buffer[j]))
-				{
-					LOGERROR("dx float overflow!!");
-					PNeuralNet->trainning.trainningGoing = false;
-					break;
-				}
+				break;
+			case Optm_Adadelta:
+				sumPTensor1->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor1->buffer[j] + (1- PNeuralNet->trainningParam.momentum)* gradij * gradij;
+				dx = -sqrt((sumPTensor2->buffer[j]+ PNeuralNet->trainningParam.eps)/ (sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps)) * gradij;
+				sumPTensor2->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor2->buffer[j] + (1 - PNeuralNet->trainningParam.momentum) * dx * dx;
+				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
 			default:
 				break;
-			}
+			}//switch
 			grads->buffer[j] = 0;
 		}
 	}
@@ -2148,13 +2157,93 @@ void NeuralNetPredict(TPNeuralNet PNeuralNet, TPVolume PVolume)
 /// @param PNeuralNet
 void NeuralNetSave(TPNeuralNet PNeuralNet)
 {
+	FILE* pFile = fopen(NEURALNET_CNN_WEIGHT_FILE_NAME, "wb");
+	if (pFile != NULL)
+	{
+		for (uint16_t layerIndex = PNeuralNet->depth - 1; layerIndex >= 0; layerIndex--)
+		{
+			TPLayer pNetLayer = (PNeuralNet->layers[layerIndex]);
+			switch (pNetLayer->LayerType)
+			{
+			case Layer_Type_Input:
+				break;
+			case Layer_Type_Convolution:
+			{
+				for (uint16_t out_d = 0; out_d < ((TPConvLayer)pNetLayer)->filters->filterNumber; out_d++)
+				{
+					TensorSave(pFile,((TPConvLayer)pNetLayer)->filters->volumes[out_d]->weight);
+				}
+				TensorSave(pFile, ((TPConvLayer)pNetLayer)->biases->weight);
+				break;
+			}
+			case Layer_Type_Pool:
+				break;
+			case Layer_Type_ReLu:
+				break;
+			case Layer_Type_FullyConnection:
+			{
+				for (uint16_t out_d = 0; out_d < ((TPFullyConnLayer)pNetLayer)->filters->filterNumber; out_d++)
+				{
+					TensorSave(pFile, ((TPFullyConnLayer)pNetLayer)->filters->volumes[out_d]->weight);
+				}
+				TensorSave(pFile, ((TPFullyConnLayer)pNetLayer)->biases->weight);
+				break;
+			}
+			case Layer_Type_SoftMax:
+				break;
+			default:
+				break;
+			}
+		}
+		fclose(pFile);
+	}
 }
 
 void NeuralNetLoad(TPNeuralNet PNeuralNet)
 {
+	FILE* pFile = fopen(NEURALNET_CNN_WEIGHT_FILE_NAME, "rb");
+	if (pFile != NULL)
+	{
+		for (uint16_t layerIndex = PNeuralNet->depth - 1; layerIndex >= 0; layerIndex--)
+		{
+			TPLayer pNetLayer = (PNeuralNet->layers[layerIndex]);
+			switch (pNetLayer->LayerType)
+			{
+			case Layer_Type_Input:
+				break;
+			case Layer_Type_Convolution:
+			{
+				for (uint16_t out_d = 0; out_d < ((TPConvLayer)pNetLayer)->filters->filterNumber; out_d++)
+				{
+					TensorRead(pFile, ((TPConvLayer)pNetLayer)->filters->volumes[out_d]->weight);
+				}
+				TensorRead(pFile, ((TPConvLayer)pNetLayer)->biases->weight);
+				break;
+			}
+			case Layer_Type_Pool:
+				break;
+			case Layer_Type_ReLu:
+				break;
+			case Layer_Type_FullyConnection:
+			{
+				for (uint16_t out_d = 0; out_d < ((TPFullyConnLayer)pNetLayer)->filters->filterNumber; out_d++)
+				{
+					TensorRead(pFile, ((TPFullyConnLayer)pNetLayer)->filters->volumes[out_d]->weight);
+				}
+				TensorRead(pFile, ((TPFullyConnLayer)pNetLayer)->biases->weight);
+				break;
+			}
+			case Layer_Type_SoftMax:
+				break;
+			default:
+				break;
+			}
+		}
+		fclose(pFile);
+	}
 }
 
-char *NeuralNetGetName(TLayerType LayerType)
+char *NeuralNetGetLayerName(TLayerType LayerType)
 {
 	return CNNTypeName[LayerType];
 }
@@ -2183,5 +2272,5 @@ TPNeuralNet NeuralNetCNNCreate()
 	PNeuralNet->printWeights = NeuralNetPrintWeights;
 	PNeuralNet->printTrainningInfo = NeuralNetPrintTrainningInfo;
 	PNeuralNet->print = NeuralNetPrint;
-	PNeuralNet->getName = NeuralNetGetName;
+	PNeuralNet->getName = NeuralNetGetLayerName;
 }
