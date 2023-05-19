@@ -1944,8 +1944,35 @@ void NeuralNetPrint(char *Name, TPTensor PTensor)
 
 void NeuralNetPrintTrainningInfo(TPNeuralNet PNeuralNet)
 {
+	time_t avg_iterations_time = 0;
+	#define FORMATD = "%06d\n"
+	#define FORMATF = "%9.6f\n"
+	#if 1
+	LOGINFO("DatasetTotal:%06d",PNeuralNet->trainning.datasetTotal);
+	LOGINFO("DatasetIndex:%06d",PNeuralNet->trainning.trinning_dataset_index);
+	LOGINFO("EpochCount  :%06d",PNeuralNet->trainning.epochCount);
+	LOGINFO("SampleCount :%06d",PNeuralNet->trainning.sampleCount);
+	LOGINFO("LabelIndex  :%06d",PNeuralNet->trainning.labelIndex);
+	LOGINFO("BatchCount  :%06d",PNeuralNet->trainning.batchCount);
+	LOGINFO("Iterations  :%06d",PNeuralNet->trainning.iterations);
 
-	LOGINFO("DatasetTotal:%d DatasetIndex:%d EpochCount:%d SampleCount:%d LabelIndex:%d BatchCount:%d Iterations=%d",
+	LOGINFO("AverageCostLoss :%.6f",	PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount);
+	LOGINFO("L1_decay_loss   :%.6f",PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount);
+	LOGINFO("L2_decay_loss   :%.6f",PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount);
+	LOGINFO("TrainingAccuracy:%.6f",PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount);
+	LOGINFO("TestingAccuracy :%.6f",PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
+
+	if (PNeuralNet->trainning.iterations > 0)
+		avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
+
+	LOGINFO("TotalElapsedTime:%lld",PNeuralNet->totalTime);
+	LOGINFO("ForwardTime     :%05lld",PNeuralNet->fwTime);
+	LOGINFO("BackwardTime    :%05lld", PNeuralNet->bwTime);
+	LOGINFO("OptimTime       :%05lld",PNeuralNet->optimTime);
+	LOGINFO("AvgBatchTime    :%05lld",avg_iterations_time);
+	LOGINFO("AvgSampleTime   :%05lld",PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
+	#else
+	LOGINFO("DatasetTotal:%06d DatasetIndex:%06d EpochCount:%06d SampleCount:%06d LabelIndex:%06d BatchCount:%06d Iterations:%06d",
 			PNeuralNet->trainning.datasetTotal,
 			PNeuralNet->trainning.trinning_dataset_index,
 			PNeuralNet->trainning.epochCount,
@@ -1954,24 +1981,24 @@ void NeuralNetPrintTrainningInfo(TPNeuralNet PNeuralNet)
 			PNeuralNet->trainning.batchCount,
 		    PNeuralNet->trainning.iterations);
 
-	LOGINFO("CostLost:%.6f L1_decay_loss:%.6f L2_decay_loss:%.6f TrainingAccuracy:%.6f TestingAccuracy:%.6f",
+	LOGINFO("AvgCostLoss:%.6f L1_decay_loss:%.6f L2_decay_loss:%.6f TrainingAccuracy:%.6f TestingAccuracy:%.6f",
 			PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
 			PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
 			PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
 			PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
 			PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
-
-	time_t avg_iterations_time = 0;
+	
     if(PNeuralNet->trainning.iterations > 0)
 	  avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
 
-	LOGINFO("TotalTime:%lld ForwardTime:%03lld BackwardTime:%03lld OptimTime:%03lld AvgBatchTime:%03lld AvgSampleTime:%03lld",
+	LOGINFO("TotalTime:%lld ForwardTime:%05lld BackwardTime:%05lld OptimTime:%05lld AvgBatchTime:%05lld AvgSampleTime:%05lld",
 		    PNeuralNet->totalTime,
 			PNeuralNet->fwTime,
 			PNeuralNet->bwTime,
 			PNeuralNet->optimTime,
 	    	avg_iterations_time,
 			PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
+	#endif
 }
 
 void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)

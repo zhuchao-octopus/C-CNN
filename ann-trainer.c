@@ -42,7 +42,7 @@ void NeuralNetStartTrainning()
 	PNeuralNetCNN->trainning.trainningGoing = true;
 	while (PNeuralNetCNN->trainning.trainningGoing)
 	{
-		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainningParam.data_type);
+		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainning.data_type);
 		
 		if (pTrainningImage != NULL)
 		{
@@ -62,7 +62,7 @@ void NeuralNetStartTrainning()
 			if (!PNeuralNetCNN->trainning.one_by_one && !PNeuralNetCNN->trainning.batch_by_batch)
 			{
 				#ifdef PLATFORM_WINDOWS
-				printf("\033[3A");
+				printf("\033[18A");
 				if (!hide_cursor)
 				{
 					CONSOLE_CURSOR_INFO CursorInfo = {1, 0};
@@ -109,7 +109,7 @@ void NeuralNetStartPrediction(void)
 		LOGINFO("Neural Net CNN is not init!!!\n");
 		return;
 	}
-	pTestImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.testing_dataset_index, PNeuralNetCNN->trainningParam.data_type);
+	pTestImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.testing_dataset_index, PNeuralNetCNN->trainning.data_type);
 	if (pTestImage != NULL)
 	{
 		PNeuralNetCNN->predict(PNeuralNetCNN, pTestImage->volume);
@@ -322,19 +322,19 @@ void NeuralNetCNNPrintLayerInfor(void)
 		pNetLayer = PNeuralNetCNN->layers[out_d];
 		if (pNetLayer->LayerType == Layer_Type_Convolution)
 		{
-			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %-15s fileterNumber=%d size=%dx%dx%d", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+			LOG("[NeuralNetLayerInfor[%02d,%02d]]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %-15s fileterNumber=%d size=%dx%dx%d\n", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
 					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNetCNN->getName(pNetLayer->LayerType), ((TPConvLayer)pNetLayer)->filters->filterNumber,
 					((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth);
 		}
 		else if (pNetLayer->LayerType == Layer_Type_FullyConnection)
 		{
-			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %-15s fileterNumber=%d size=%dx%dx%d", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+			LOG("[NeuralNetLayerInfor[%02d,%02d]]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %-15s fileterNumber=%d size=%dx%dx%d\n", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
 					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNetCNN->getName(pNetLayer->LayerType), ((TPConvLayer)pNetLayer)->filters->filterNumber,
 					((TPFullyConnLayer)pNetLayer)->filters->_w, ((TPFullyConnLayer)pNetLayer)->filters->_h, ((TPFullyConnLayer)pNetLayer)->filters->_depth);
 		}
 		else
 		{
-			LOGINFO("NeuralNetCNN[%02d,%02d]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %s", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+			LOG("[NeuralNetLayerInfor[%02d,%02d]]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %s\n", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
 					pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNetCNN->getName(pNetLayer->LayerType));
 		}
 	}
@@ -348,7 +348,7 @@ void NeuralNetCNNInitLeaningParameter(void)
 		LOG("PNeuralNetCNN is null,please create a neural net cnn first!");
 		return;
 	}
-	PNeuralNetCNN->trainningParam.data_type = Cifar10;
+	
 	PNeuralNetCNN->trainningParam.optimize_method = Optm_Adadelta;
 	PNeuralNetCNN->trainningParam.batch_size = 10;
 	PNeuralNetCNN->trainningParam.l1_decay = 0;
@@ -360,6 +360,7 @@ void NeuralNetCNNInitLeaningParameter(void)
 	PNeuralNetCNN->trainningParam.momentum = 0.90;
 	PNeuralNetCNN->trainningParam.bias = 0.1;
 	////////////////////////////////////////////////////
+	PNeuralNetCNN->trainning.data_type = Cifar10;
 	PNeuralNetCNN->trainning.trinning_dataset_index = 0;
 	PNeuralNetCNN->trainning.testing_dataset_index = 0;
 	PNeuralNetCNN->trainning.datasetTotal = 50000;
@@ -384,12 +385,13 @@ void NeuralNetCNNInitLeaningParameter(void)
 	PNeuralNetCNN->trainning.batch_by_batch = false;
 	PNeuralNetCNN->trainning.one_by_one = false;
 	PNeuralNetCNN->totalTime = 0;
-	LOG("[LeaningParameters]:data_type:%s optimize_method=%d batch_size=%d l1_decay=%f l2_decay=%f beta1=%f beta2=%f eps=%f learning_rate=%f,momentum=%f bias=%f\n",
-		GetDataSetName(PNeuralNetCNN->trainningParam.data_type),
+	LOG("[LeaningParameters]:data_type:%s optimize_method:%d batch_size:%d l1_decay:%f l2_decay:%f\n",
+		GetDataSetName(PNeuralNetCNN->trainning.data_type),
 		PNeuralNetCNN->trainningParam.optimize_method,
 		PNeuralNetCNN->trainningParam.batch_size,
 		PNeuralNetCNN->trainningParam.l1_decay,
-		PNeuralNetCNN->trainningParam.l2_decay,
+		PNeuralNetCNN->trainningParam.l2_decay);
+	LOG("[LeaningParameters]:beta1:%f beta2:%f eps:%f learning_rate:%f,momentum:%f bias:%f\n",
 		PNeuralNetCNN->trainningParam.beta1,
 		PNeuralNetCNN->trainningParam.beta2,
 		PNeuralNetCNN->trainningParam.eps,
@@ -408,6 +410,9 @@ void NeuralNetCNNPrintNetInformation(void)
 	uint16_t others = 0;
 	uint32_t outLength = 0;
 	float32_t totalSize = 0;
+	float32_t out_size = 0;
+	float32_t filter_size = 0;
+
 	if (PNeuralNetCNN == NULL || PNeuralNetCNN->backward == NULL || PNeuralNetCNN->forward == NULL || PNeuralNetCNN->init == NULL || PNeuralNetCNN->train == NULL || PNeuralNetCNN->depth < 5)
 	{
 		LOGINFO("Neural Net CNN is not init!!!\n");
@@ -469,8 +474,14 @@ void NeuralNetCNNPrintNetInformation(void)
 			break;
 		}
 	}
+
 	totalSize = (outLength * sizeof(float32_t) + filterLength * sizeof(float32_t)) / 1024;
-	// totalSize = (filterLength *sizeof(float32_t)) / 1024;
-	LOG("[NeuralNetCNNInfor]:in_v_count:%d out_v_count:%d bias_count:%d others:%d filter_count:%d filter_length:%d filter_size:%.2fk out_length:%d out_size:%.2fk total_size:%.2fk",
-		inputVolCount, outputVolCount, biasCount, others, filterCount, filterLength, filterLength * sizeof(float32_t) / 1024, outLength, outLength * sizeof(float32_t) / 1024, totalSize);
+	out_size = outLength * sizeof(float32_t) / 1024;
+	filter_size = filterLength * sizeof(float32_t) / 1024;
+
+	LOG("[NeuralNetCNNInfor]:in_v_count:%d out_v_count:%d bias_count:%d others:%d filter_count:%d\n",
+		inputVolCount, outputVolCount, biasCount, others, filterCount);
+
+	LOG("[NeuralNetCNNInfor]:filter_length:%d out_length:%d filter_size:%.2fk out_size:%.2fk total_size:%.2fk",
+	   filterLength, outLength, filter_size, out_size, totalSize);
 }

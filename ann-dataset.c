@@ -6,13 +6,16 @@
 
 #include "ann-dataset.h"
 
-#define CifarFilePathName1 "../cifar-10-batches-bin\\data_batch_1.bin"
-#define CifarFilePathName2 "../cifar-10-batches-bin\\data_batch_2.bin"
-#define CifarFilePathName3 "../cifar-10-batches-bin\\data_batch_3.bin"
-#define CifarFilePathName4 "../cifar-10-batches-bin\\data_batch_4.bin"
-#define CifarFilePathName5 "../cifar-10-batches-bin\\data_batch_5.bin"
+#define Cifar10FilePathName1 "../cifar-10-batches-bin\\data_batch_1.bin"
+#define Cifar10FilePathName2 "../cifar-10-batches-bin\\data_batch_2.bin"
+#define Cifar10FilePathName3 "../cifar-10-batches-bin\\data_batch_3.bin"
+#define Cifar10FilePathName4 "../cifar-10-batches-bin\\data_batch_4.bin"
+#define Cifar10FilePathName5 "../cifar-10-batches-bin\\data_batch_5.bin"
 
-#define CifarFilePathName6 "../cifar-10-batches-bin\\test_batch.bin"    
+#define Cifar10FilePathName6 "../cifar-10-batches-bin\\test_batch.bin"    
+
+#define Cifar100FilePathName_test "../cifar-100-binary\\test.bin"    
+#define Cifar100FilePathName_train "../cifar-100-binary\\train.bin"    
 ///////////////////////////////////////////////////////////////////////////////////
 uint8_t CifarBuffer[CIFAR10_IMAGE_SIZE + 1];
 const char LabelNameList[][10] = {"airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"};
@@ -24,7 +27,10 @@ void CloseDataset()
 {
     if (PCifarFile_Trainning != NULL)
         fclose(PCifarFile_Trainning);
+    if (PCifarFile_Testing != NULL)
+        fclose(PCifarFile_Testing);
     PCifarFile_Trainning = NULL;
+    PCifarFile_Testing = NULL;
 }
 
 char *GetDataSetName(uint16_t DsType)
@@ -40,7 +46,14 @@ TPPicture Dataset_GetTestingPic(uint32_t TestingIndex, uint16_t DataSetType)
 {
     if (PCifarFile_Testing == NULL)
     {
-        PCifarFile_Testing = fopen(CifarFilePathName6, "rb");
+        if (DataSetType == Cifar10)
+        {
+            PCifarFile_Testing = fopen(Cifar10FilePathName6, "rb");
+        }
+        else  if (DataSetType == Cifar100)
+        {
+            PCifarFile_Testing = fopen(Cifar100FilePathName_test, "rb");
+        }
     }
     if (PCifarFile_Testing != NULL)
         return Dataset_GetPic(PCifarFile_Testing, TestingIndex, DataSetType);
@@ -54,32 +67,42 @@ TPPicture Dataset_GetTestingPic(uint32_t TestingIndex, uint16_t DataSetType)
 /// @return
 TPPicture Dataset_GetTrainningPic(uint32_t TrainningIndex, uint16_t DataSetType)
 {
-    uint32_t image_index = TrainningIndex % CIFAR10_TRAINNING_IMAGE_BATCH_COUNT;
-    if (PCifarFile_Trainning == NULL)
+    uint32_t image_index = TrainningIndex;
+    if (DataSetType == Cifar10)
     {
-        PCifarFile_Trainning = fopen(CifarFilePathName1, "rb");
+            image_index = TrainningIndex % CIFAR10_TRAINNING_IMAGE_BATCH_COUNT;
+            if (PCifarFile_Trainning == NULL)
+            {
+                PCifarFile_Trainning = fopen(Cifar10FilePathName1, "rb");
+            }
+            else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT)
+            {
+                CloseDataset();
+                    PCifarFile_Trainning = fopen(Cifar10FilePathName2, "rb");
+            }
+            else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 2)
+            {
+                CloseDataset();
+                PCifarFile_Trainning = fopen(Cifar10FilePathName3, "rb");
+            }
+            else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 3)
+            {
+                CloseDataset();
+                PCifarFile_Trainning = fopen(Cifar10FilePathName4, "rb");
+            }
+            else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 4)
+            {
+                CloseDataset();
+                PCifarFile_Trainning = fopen(Cifar10FilePathName5, "rb");
+            }
     }
-    else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT)
+    else if (DataSetType == Cifar100)
     {
-        CloseDataset();
-        PCifarFile_Trainning = fopen(CifarFilePathName2, "rb");
+        if (PCifarFile_Trainning == NULL)
+        {
+            PCifarFile_Trainning = fopen(Cifar100FilePathName_train, "rb");
+        }
     }
-    else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT*2)
-    {
-        CloseDataset();
-        PCifarFile_Trainning = fopen(CifarFilePathName3, "rb");
-    }
-    else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT*3)
-    {
-        CloseDataset();
-        PCifarFile_Trainning = fopen(CifarFilePathName4, "rb");
-    }
-    else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT*4)
-    {
-        CloseDataset();
-        PCifarFile_Trainning = fopen(CifarFilePathName5, "rb");
-    }
-
     if (PCifarFile_Trainning != NULL)
         return Dataset_GetPic(PCifarFile_Trainning, image_index, DataSetType);
     else
@@ -133,9 +156,15 @@ TPPicture Dataset_GetPic(FILE *PFile, uint32_t ImageIndex, uint16_t DataSetType)
         {
             for (uint16_t x = 0; x < CIFAR10_IMAGE_WIDTH; x++)
             {
-                pPic->volume->setValue(pPic->volume, x, y, 0, (CifarBuffer[y * CIFAR10_IMAGE_WIDTH + x + 1] / 255) - 0.5);
-                pPic->volume->setValue(pPic->volume, x, y, 1, (CifarBuffer[y * CIFAR10_IMAGE_WIDTH * CIFAR10_IMAGE_HEIGHT + x + 1] / 255) - 0.5);
-                pPic->volume->setValue(pPic->volume, x, y, 3, (CifarBuffer[y * CIFAR10_IMAGE_WIDTH * CIFAR10_IMAGE_HEIGHT * 2 + x + 1] / 255) - 0.5);
+                uint8_t r = CifarBuffer[y * CIFAR10_IMAGE_WIDTH + 0000 + x + 2];
+                uint8_t g = CifarBuffer[y * CIFAR10_IMAGE_WIDTH + 1024 + x + 2];
+                uint8_t b = CifarBuffer[y * CIFAR10_IMAGE_WIDTH + 2048 + x + 2];
+                float32_t fr = r / 255.0;
+                float32_t fg = g / 255.0;
+                float32_t fb = b / 255.0;
+                pPic->volume->setValue(pPic->volume, x, y, 0, fr - 0.5);
+                pPic->volume->setValue(pPic->volume, x, y, 1, fg - 0.5);
+                pPic->volume->setValue(pPic->volume, x, y, 2, fb - 0.5);
             }
         }
     }

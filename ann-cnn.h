@@ -86,11 +86,7 @@ typedef enum LayerType
 	Layer_Type_None
 } TLayerType;
 
-typedef enum DataSetType
-{
-	Cifar10,
-	Cifar100
-} TDataSetType;
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 /*深度学习优化算法：
  0. 梯度下降法（Gradient Descent）
@@ -327,7 +323,6 @@ typedef struct ANN_CNN_SoftmaxLayer
 
 typedef struct ANN_CNN_LearningParameter
 {
-	TDataSetType data_type;
 	uint16_t optimize_method;
 	uint16_t batch_size;
 	float32_t learning_rate;
@@ -343,6 +338,7 @@ typedef struct ANN_CNN_LearningParameter
 typedef struct ANN_CNN_Learning
 {
 	bool_t trainningGoing;
+	uint16_t data_type;
 	float32_t cost_loss;
 	float32_t sum_cost_loss;
 	float32_t l1_decay_loss;

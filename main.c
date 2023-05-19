@@ -3,6 +3,7 @@
 // test
 /////////////////////////////////////////////////////////////////////////////////////////////
 #include "ann-cnn.h"
+#include "ann-dataset.h"
 extern TPNeuralNet PNeuralNetCNN;
 void showBanner(void);
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -16,7 +17,8 @@ int main()
 #if defined(__STDC_VERSION__)
 	printf("__STDC_VERSION__ Version %ld\n", __STDC_VERSION__);
 #endif
-	printf("////////////////////////////////////////////////////////////\n");
+	printf("version:1.0.0.0\n");
+	printf("////////////////////////////////////////////////////////////////////////////////////\n");
 	LOGINFO("InitNeuralNet_CNN...");
 	NeuralNetCNNInit();
 	LOGINFO("InitLeaningParameter...");
@@ -26,19 +28,24 @@ int main()
 	while (true)
 	{
 		printf("\n");
-		printf("please select a menu item to continue...\n");
-		printf("0: Exit.\n");
-		printf("1: Print weight usage:2 10,two parameters,the first is the command number and the second is the network layer index.\n");
-		printf("2: Print gradients usage same as print weight.\n");
-		printf("3: Print neural network information,displays the network structure information.\n");
+		printf("\nplease select a menu item to continue...\n");
+		printf("00: Exit.\n");
+		printf("01: Print weight usage:2 10,two parameters,the first is the command number and the second is the network layer index.\n");
+		printf("02: Print gradients usage same as print weight.\n");
+		printf("03: Print neural network information,displays the network structure information.\n");
 
-		printf("4: Start trainning one by one,learn one CIFAR-10 picture at a time.\n");
-		printf("5: Start trainning by batch,learn a batch CIFAR-10 picture at a time.\n");
-		printf("6: Start trainning without saving weights,learning of the CIFAR-10 50,000 images do not save weights.\n");
-		printf("7: Start trainning and saving weights,learning of the CIFAR-10 50,000 images and save weights to file cnn.w.\n");
+		printf("04: Start trainning CIFAR-10 one by one,learn one CIFAR-10 picture at a time.\n");
+		printf("05: Start trainning CIFAR-10 by batch,learn a batch CIFAR-10 picture at a time.\n");
+		printf("06: Start trainning CIFAR-10 without saving weights,learning of the CIFAR-10 50,000 images do not save weights.\n");
+		printf("07: Start trainning CIFAR-10 and saving weights,learning of the CIFAR-10 50,000 images and save weights to file cnn.w.\n");
 		
-		printf("8: Save weights to   file cnn.w\n");
-		printf("9: Load weights from file cnn.w\n");
+		printf("08: Start trainning CIFAR-100 one by one,learn one CIFAR-100 picture at a time.\n");
+		printf("09: Start trainning CIFAR-100 by batch,learn a batch CIFAR-100 picture at a time.\n");
+		printf("10: Start trainning CIFAR-100 without saving weights,learning of the CIFAR-100 50,000 images do not save weights.\n");
+		printf("11: Start trainning CIFAR-100 and saving weights,learning of the CIFAR-100 50,000 images and save weights to file cnn.w.\n");
+
+		printf("12: Save weights to   file cnn.w\n");
+		printf("13: Load weights from file cnn.w\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(str);
@@ -98,14 +105,48 @@ int main()
 			PNeuralNetCNN->trainning.batch_by_batch = false;
 			NeuralNetStartTrainning();
 			break;
+
 		case 8:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.data_type = Cifar100;
+			PNeuralNetCNN->trainning.trainingSaving = false;
+			PNeuralNetCNN->trainning.one_by_one = true;
+			PNeuralNetCNN->trainning.batch_by_batch = false;
+			NeuralNetStartTrainning();
+			break;
+		case 9:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.data_type = Cifar100;
+			PNeuralNetCNN->trainning.trainingSaving = false;
+			PNeuralNetCNN->trainning.one_by_one = false;
+			PNeuralNetCNN->trainning.batch_by_batch = true;
+			NeuralNetStartTrainning();
+			break;
+		case 10:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.data_type = Cifar100;
+			PNeuralNetCNN->trainning.trainingSaving = false;
+			PNeuralNetCNN->trainning.batch_by_batch = false;
+			PNeuralNetCNN->trainning.one_by_one = false;
+			NeuralNetStartTrainning();
+			break;
+		case 11:
+			LOGINFO("NeuralNet start trainning...");
+			PNeuralNetCNN->trainning.data_type = Cifar100;
+			PNeuralNetCNN->trainning.trainingSaving = true;
+			PNeuralNetCNN->trainning.one_by_one = false;
+			PNeuralNetCNN->trainning.batch_by_batch = false;
+			NeuralNetStartTrainning();
+			break;
+
+		case 12:
 			if (PNeuralNetCNN != NULL)
 			{
 				LOGINFO("NeuralNet saving...");
 				PNeuralNetCNN->save(PNeuralNetCNN);
 			}
 			break;
-		case 9:
+		case 13:
 			if (PNeuralNetCNN != NULL)
 			{
 				LOGINFO("NeuralNet loading...");

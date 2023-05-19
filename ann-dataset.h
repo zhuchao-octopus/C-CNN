@@ -18,6 +18,12 @@
 #define CIFAR10_TRAINNING_IMAGE_BATCH_COUNT 10000
 #define CIFAR10_TRAINNING_IMAGE_COUNT CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 5
 
+typedef enum DataSetType
+{
+	Cifar10,
+	Cifar100
+} TDataSetType;
+
 typedef struct ANN_CNN_DataSet_Image
 {
 	TDataSetType data_type;
