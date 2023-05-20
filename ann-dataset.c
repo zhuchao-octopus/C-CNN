@@ -115,11 +115,13 @@ TPPicture Dataset_GetTrainningPic(uint32_t TrainningIndex, uint16_t DataSetType)
 /// @return
 TPPicture Dataset_GetPic(FILE *PFile, uint32_t ImageIndex, uint16_t DataSetType)
 {
-    uint32_t iSize = CifarReadImage2(PFile, CifarBuffer, ImageIndex);
+    uint32_t iSize = 0;
     TPPicture pPic = NULL;
 
-    if ((DataSetType == Cifar10) && (iSize == CIFAR10_IMAGE_SIZE))
+    if (DataSetType == Cifar10)
     {
+        iSize = Cifar10ReadImage(PFile, CifarBuffer, ImageIndex);
+        if (iSize != CIFAR10_IMAGE_SIZE) return pPic;
         pPic = malloc(sizeof(TDSImage));
         pPic->data_type = Cifar10;
         pPic->labelIndex = CifarBuffer[0];
@@ -144,8 +146,10 @@ TPPicture Dataset_GetPic(FILE *PFile, uint32_t ImageIndex, uint16_t DataSetType)
         }
     }
 
-    else if ((DataSetType == Cifar100) && (iSize == (CIFAR10_IMAGE_SIZE + 1)))
+    else if (DataSetType == Cifar100)
     {
+        iSize = Cifar100ReadImage(PFile, CifarBuffer, ImageIndex);
+        if (iSize != CIFAR100_IMAGE_SIZE) return pPic;
         pPic = malloc(sizeof(TDSImage));
         pPic->data_type = Cifar100;
         pPic->labelIndex = CifarBuffer[0];
@@ -170,7 +174,7 @@ TPPicture Dataset_GetPic(FILE *PFile, uint32_t ImageIndex, uint16_t DataSetType)
     }
     else
     {
-        // LOGINFO("Read data failed from %s TrainningIndex=%d DataSetType = %d\n", PFile->_tmpfname, ImageIndex, DataSetType);
+        // LOGINFOR("Read data failed from %s TrainningIndex=%d DataSetType = %d\n", PFile->_tmpfname, ImageIndex, DataSetType);
     }
     return pPic;
 }
@@ -190,10 +194,15 @@ uint32_t CifarReadImage(const char *FileName, uint8_t *Buffer, uint32_t ImageInd
 /// @param Buffer
 /// @param ImageIndex
 /// @return
-uint32_t CifarReadImage2(FILE *PFile, uint8_t *Buffer, uint32_t ImageIndex)
+uint32_t Cifar10ReadImage(FILE *PFile, uint8_t *Buffer, uint32_t ImageIndex)
 {
     uint32_t offset = CIFAR10_IMAGE_SIZE * ImageIndex;
     return ReadFileToBuffer2(PFile, Buffer, CIFAR10_IMAGE_SIZE, offset);
+}
+uint32_t Cifar100ReadImage(FILE* PFile, uint8_t* Buffer, uint32_t ImageIndex)
+{
+    uint32_t offset = CIFAR100_IMAGE_SIZE * ImageIndex;
+    return ReadFileToBuffer2(PFile, Buffer, CIFAR100_IMAGE_SIZE, offset);
 }
 /// @brief ////////////////////////////////////////////////////////////////////////
 /// @param FileName

@@ -20,8 +20,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-
-// Minimum negative number
 #define NULL ((void *)0)
 #define MINFLOAT_POSITIVE_NUMBER (1.175494351E-38)	// 最小正规化数
 #define MAXFLOAT_POSITIVE_NUMBER (3.402823466E+38)	// 最大正规化数
@@ -33,8 +31,8 @@
 #define PRINTFLAG_GRADS 1
 #define PRINTFLAG_FORMAT "%9.6f"
 
-#define NEURALNET_CNN_WEIGHT_FILE_NAME "CNN.W"
-
+#define NEURALNET_CNN_WEIGHT_FILE_NAME "_cnn.w"
+#define NEURALNET_ERROR_BASE 10001
 
 #define PLATFORM_WINDOWS
 // #define PLATFORM_STM32
@@ -65,10 +63,12 @@ typedef unsigned char uint8_t;
 #endif
 
 #ifdef __DEBUG__LOG__
-#define LOGINFO(format, ...)  LOGLOG("[Infor][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+#define LOGINFO(format, ...)  LOGLOG("[Infor][%-9.9s][%s]:" format "\n", __FILE__, __func__, ##__VA_ARGS__)
+#define LOGINFOR(format, ...)  LOGLOG("[Infor][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #define LOGERROR(format, ...) LOGLOG("[Error][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #else
-#define LOGINFO(format, ...)
+#define LOGINFO(format, ...)  
+#define LOGINFOR(format, ...)
 #define LOGERROR(format, ...)
 #endif
 
@@ -89,16 +89,16 @@ typedef enum LayerType
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /*深度学习优化算法：
- 0. 梯度下降法（Gradient Descent）
- 1. 随机梯度下降法（Stochastic Gradient Descent）
- 2. 批量梯度下降法（Batch Gradient Descent）
- 3. 动量法（Momentum）
- 4. Nesterov加速梯度（Nesterov Accelerated Gradient）
- 5. 自适应梯度算法（Adagrad）
- 6. 自适应矩估计算法（Adadelta）
- 7. 自适应矩估计算法（RMSprop）
- 8. 自适应矩估计算法（Adam）
- 9. 自适应矩估计算法（Adamax）
+ 00. 梯度下降法（Gradient Descent）
+ 01. 随机梯度下降法（Stochastic Gradient Descent）
+ 02. 批量梯度下降法（Batch Gradient Descent）
+ 03. 动量法（Momentum）
+ 04. Nesterov加速梯度（Nesterov Accelerated Gradient）
+ 05. 自适应梯度算法（Adagrad）
+ 06. 自适应矩估计算法（Adadelta）
+ 07. 自适应矩估计算法（RMSprop）
+ 08. 自适应矩估计算法（Adam）
+ 09. 自适应矩估计算法（Adamax）
  10. 自适应矩估计算法（Nadam）
  11. 自适应学习率优化算法（AdaBound）
  12. 自适应学习率优化算法（AdaBelief）
@@ -371,6 +371,7 @@ typedef struct ANN_CNN_Learning
 
 typedef struct ANN_CNN_NeuralNet
 {
+	char* name;
 	TPLayer *layers;
 	uint16_t depth;
 	time_t fwTime;
@@ -391,10 +392,12 @@ typedef struct ANN_CNN_NeuralNet
 	void (*train)(struct ANN_CNN_NeuralNet *PNeuralNet, TPVolume PVolume);
 	void (*predict)(struct ANN_CNN_NeuralNet* PNeuralNet, TPVolume PVolume);
 	void (*printWeights)(struct ANN_CNN_NeuralNet *PNeuralNet, uint16_t LayerIndex, uint8_t InOut);
+	void (*printTensor)(char* Name, TPTensor PTensor);
 	// void (*printFilters)(struct ANN_CNN_NeuralNet *PNeuralNet,uint16_t LayerIndex,uint8_t InOut);
 	void (*printGradients)(struct ANN_CNN_NeuralNet *PNeuralNet, uint16_t LayerIndex, uint8_t InOut);
-	void (*printTrainningInfo)(struct ANN_CNN_NeuralNet *PNeuralNet);
-	void (*print)(char *Name, TPTensor PTensor);
+	void (*printTrainningInfor)(struct ANN_CNN_NeuralNet *PNeuralNet);
+	void (*printNetLayersInfor)(struct ANN_CNN_NeuralNet* PNeuralNet);
+	
 	void (*save)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*load)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	char *(*getName)(TLayerType LayerType);
@@ -417,7 +420,11 @@ float32_t VolumeGetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t 
 void VolumePrint(TPVolume PVolume, uint8_t wg);
 TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber);
 void FilterVolumesFree(TPFilters PFilters);
+void NeuralNetPrintLayersInfor(TPNeuralNet PNeuralNet);
 
+
+DLLEXPORT TPNeuralNet NeuralNetCNNCreate(char* name);
+DLLEXPORT int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption);
 DLLEXPORT void NeuralNetInit(TPNeuralNet PNeuralNet, TPLayerOption PLayerOption);
 DLLEXPORT void NeuralNetFree(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetForward(TPNeuralNet PNeuralNet, TPVolume PVolume);
@@ -429,17 +436,14 @@ DLLEXPORT void NeuralNetSave(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetLoad(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetGetMaxPrediction(TPNeuralNet PNeuralNet, TPPrediction PPrediction);
 DLLEXPORT void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume);
-
+DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 /// @brief ////////////////////////////////////////////////////////////////////////////////////////////////
 /// @return
-DLLEXPORT TPNeuralNet NeuralNetCNNCreate();
-DLLEXPORT void NeuralNetCNNInit(void);
-DLLEXPORT void NeuralNetCNNInitLeaningParameter(void);
-DLLEXPORT void NeuralNetStartTrainning(void);
-DLLEXPORT void NeuralNetStartPrediction(void);
-DLLEXPORT void NeuralNetCNNPrintNetInformation(void);
-DLLEXPORT void NeuralNetCNNPrintLayerInfor(void);
+DLLEXPORT void NeuralNetInit_Cifar10(void);
+DLLEXPORT void NeuralNetInit_Cifar100(void);
+
+
 DLLEXPORT void testDSPFloatProcess(float32_t f1, float32_t f2);
 DLLEXPORT time_t GetTimestamp(void);
-DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
+
 #endif /* _INC_ANN_CNN_H_ */

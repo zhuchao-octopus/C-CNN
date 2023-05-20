@@ -4,53 +4,71 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 #include "ann-cnn.h"
 #include "ann-dataset.h"
-extern TPNeuralNet PNeuralNetCNN;
+#define NET_CIFAR10_NAME "Cifar10"
+#define NET_CIFAR100_NAME "Cifar100"
+
+extern TPNeuralNet PNeuralNetCNN_Cifar10, PNeuralNetCNN_Cifar100;
+extern void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
+extern void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
+extern void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
 void showBanner(void);
 /////////////////////////////////////////////////////////////////////////////////////////////
-
+///创建两个深度学习网络PNeuralNetCNN_Cifar10, PNeuralNetCNN_Cifar100 
+///同时学习Cifar10和Cifar100数据集
 int main()
 {
 	char str[32] = "";
+	char net_name[32] = "";
 	int cmd = 0;
 	int layer = 0;
+	int lines = 0;
 	showBanner();
 #if defined(__STDC_VERSION__)
 	printf("__STDC_VERSION__ Version %ld\n", __STDC_VERSION__);
 #endif
 	printf("version:1.0.0.0\n");
 	printf("////////////////////////////////////////////////////////////////////////////////////\n");
-	LOGINFO("InitNeuralNet_CNN...");
-	NeuralNetCNNInit();
-	LOGINFO("InitLeaningParameter...");
-	NeuralNetCNNInitLeaningParameter();
-	NeuralNetCNNPrintNetInformation();
+	LOG("InitNeuralNet_CNN Cifar10...\n");
+	NeuralNetInit_Cifar10();
+	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar10);
+	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar10);
+
+	LOG("\n");
+	LOG("InitNeuralNet_CNN Cifar100...\n");
+	NeuralNetInit_Cifar100();
+	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar100);
+	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar100);
 
 	while (true)
 	{
-		printf("\n");
+		printf("\033[%dB", lines);
+		lines = 20;
+		//printf("\n");
 		printf("\nplease select a menu item to continue...\n");
 		printf("00: Exit.\n");
-		printf("01: Print weight usage:2 10,two parameters,the first is the command number and the second is the network layer index.\n");
-		printf("02: Print gradients usage same as print weight.\n");
+		printf("01: Print weight    usage:1 10 Cifar10,three parameters,the first is command,the second is layer index and the third is net name.\n");
+		printf("02: Print gradients usage:2 10 Cifar10,it is same as print weight.\n");
 		printf("03: Print neural network information,displays the network structure information.\n");
 
 		printf("04: Start trainning CIFAR-10 one by one,learn one CIFAR-10 picture at a time.\n");
-		printf("05: Start trainning CIFAR-10 by batch,learn a batch CIFAR-10 picture at a time.\n");
+		printf("05: Start trainning CIFAR-10 batch by batch,learn a batch CIFAR-10 picture at a time.\n");
 		printf("06: Start trainning CIFAR-10 without saving weights,learning of the CIFAR-10 50,000 images do not save weights.\n");
 		printf("07: Start trainning CIFAR-10 and saving weights,learning of the CIFAR-10 50,000 images and save weights to file cnn.w.\n");
 		
 		printf("08: Start trainning CIFAR-100 one by one,learn one CIFAR-100 picture at a time.\n");
-		printf("09: Start trainning CIFAR-100 by batch,learn a batch CIFAR-100 picture at a time.\n");
+		printf("09: Start trainning CIFAR-100 batch by batch,learn a batch CIFAR-100 picture at a time.\n");
 		printf("10: Start trainning CIFAR-100 without saving weights,learning of the CIFAR-100 50,000 images do not save weights.\n");
 		printf("11: Start trainning CIFAR-100 and saving weights,learning of the CIFAR-100 50,000 images and save weights to file cnn.w.\n");
 
-		printf("12: Save weights to   file cnn.w\n");
-		printf("13: Load weights from file cnn.w\n");
+		printf("12: Start trainning CIFAR-100 and CIFAR-10 \n");
+
+		printf("13: Save weights to   file cnn.w\n");
+		printf("14: Load weights from file cnn.w\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(str);
-		sscanf(str, "%d %d", &cmd, &layer);
-		printf("your choose command=%d layer=%d\n", cmd, layer);
+		sscanf(str, "%d %d %s", &cmd, &layer, net_name);
+		printf("Command:%d Layer Index:%d Net Name:%s\n", cmd, layer, net_name);
 
 		switch (cmd)
 		{
@@ -58,100 +76,139 @@ int main()
 			CloseDataset();
 			return 0;
 		case 1:
-			if (PNeuralNetCNN != NULL)
+			if (PNeuralNetCNN_Cifar10 != NULL && (strcmp(net_name, NET_CIFAR10_NAME)==0))
 			{
-				PNeuralNetCNN->printWeights(PNeuralNetCNN, layer, 1);
-				PNeuralNetCNN->printWeights(PNeuralNetCNN, layer, 0);
-				PNeuralNetCNN->printWeights(PNeuralNetCNN, layer, 2);
+				PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, layer, 1);
+				PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, layer, 0);
+				PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, layer, 2);
 			}
+			else if (PNeuralNetCNN_Cifar100 != NULL && (strcmp(net_name, NET_CIFAR100_NAME)==0))
+			{
+				PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, layer, 1);
+				PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, layer, 0);
+				PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, layer, 2);
+			}
+			else
+				LOG("Need three parameters");
 			break;
 		case 2:
-			if (PNeuralNetCNN != NULL)
+			if (PNeuralNetCNN_Cifar10 != NULL && (strcmp(net_name, NET_CIFAR10_NAME)==0))
 			{
-				PNeuralNetCNN->printGradients(PNeuralNetCNN, layer, 1);
-				PNeuralNetCNN->printGradients(PNeuralNetCNN, layer, 0);
-				PNeuralNetCNN->printGradients(PNeuralNetCNN, layer, 2);
+				PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, layer, 1);
+				PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, layer, 0);
+				PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, layer, 2);
 			}
+			else if (PNeuralNetCNN_Cifar100 != NULL && (strcmp(net_name, NET_CIFAR100_NAME)==0))
+			{
+				PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, layer, 1);
+				PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, layer, 0);
+				PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, layer, 2);
+			}
+			else
+				LOG("Need three parameters");
 			break;
 		case 3:
-			NeuralNetCNNPrintLayerInfor();
+				PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar10);
+				PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar100);
 			break;
 
 		case 4:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.trainingSaving = false;
-			PNeuralNetCNN->trainning.one_by_one = true;
-			PNeuralNetCNN->trainning.batch_by_batch = false;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar10->trainning.trainingSaving = false;
+			PNeuralNetCNN_Cifar10->trainning.one_by_one = true;
+			PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false;
+			PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
 			break;
 		case 5:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.trainingSaving = false;
-			PNeuralNetCNN->trainning.one_by_one = false;
-			PNeuralNetCNN->trainning.batch_by_batch = true;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar10->trainning.trainingSaving = false;
+			PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar10->trainning.batch_by_batch = true;
+			PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
 			break;
 		case 6:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.trainingSaving = false;
-			PNeuralNetCNN->trainning.batch_by_batch = false;
-			PNeuralNetCNN->trainning.one_by_one = false;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar10->trainning.trainingSaving = false;
+			PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false;
+			PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
 			break;
 		case 7:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.trainingSaving = true;
-			PNeuralNetCNN->trainning.one_by_one = false;
-			PNeuralNetCNN->trainning.batch_by_batch = false;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar10->trainning.trainingSaving = true;
+			PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false;
+			PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
 			break;
 
 		case 8:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.data_type = Cifar100;
-			PNeuralNetCNN->trainning.trainingSaving = false;
-			PNeuralNetCNN->trainning.one_by_one = true;
-			PNeuralNetCNN->trainning.batch_by_batch = false;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
+			PNeuralNetCNN_Cifar100->trainning.trainingSaving = false;
+			PNeuralNetCNN_Cifar100->trainning.one_by_one = true;
+			PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false;
+			PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
 			break;
 		case 9:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.data_type = Cifar100;
-			PNeuralNetCNN->trainning.trainingSaving = false;
-			PNeuralNetCNN->trainning.one_by_one = false;
-			PNeuralNetCNN->trainning.batch_by_batch = true;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
+			PNeuralNetCNN_Cifar100->trainning.trainingSaving = false;
+			PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar100->trainning.batch_by_batch = true;
+			PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
 			break;
 		case 10:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.data_type = Cifar100;
-			PNeuralNetCNN->trainning.trainingSaving = false;
-			PNeuralNetCNN->trainning.batch_by_batch = false;
-			PNeuralNetCNN->trainning.one_by_one = false;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
+			PNeuralNetCNN_Cifar100->trainning.trainingSaving = false;
+			PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false;
+			PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
 			break;
 		case 11:
-			LOGINFO("NeuralNet start trainning...");
-			PNeuralNetCNN->trainning.data_type = Cifar100;
-			PNeuralNetCNN->trainning.trainingSaving = true;
-			PNeuralNetCNN->trainning.one_by_one = false;
-			PNeuralNetCNN->trainning.batch_by_batch = false;
-			NeuralNetStartTrainning();
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
+			PNeuralNetCNN_Cifar100->trainning.trainingSaving = true;
+			PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false;
+			PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
+			NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
 			break;
 
 		case 12:
-			if (PNeuralNetCNN != NULL)
+			LOGINFOR("NeuralNet start trainning...");
+			PNeuralNetCNN_Cifar10->trainning.trainingSaving = true;
+			PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar10->trainning.batch_by_batch = true;
+
+			PNeuralNetCNN_Cifar100->trainning.trainingSaving = true;
+			PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
+			PNeuralNetCNN_Cifar100->trainning.batch_by_batch = true;
+		
+			while (true)//同时训练两个网络
 			{
-				LOGINFO("NeuralNet saving...");
-				PNeuralNetCNN->save(PNeuralNetCNN);
+				NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
+				
+				NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
 			}
 			break;
 		case 13:
-			if (PNeuralNetCNN != NULL)
-			{
-				LOGINFO("NeuralNet loading...");
-				PNeuralNetCNN->load(PNeuralNetCNN);
-			}
+				LOGINFOR("NeuralNet saving...");
+				PNeuralNetCNN_Cifar100->save(PNeuralNetCNN_Cifar10);
+				PNeuralNetCNN_Cifar100->save(PNeuralNetCNN_Cifar100);
+			break;
+		case 14:
+				LOGINFOR("NeuralNet loading...");
+				PNeuralNetCNN_Cifar100->load(PNeuralNetCNN_Cifar10);
+			
+				PNeuralNetCNN_Cifar100->load(PNeuralNetCNN_Cifar100);
 			break;
 		default:
 			printf("\n");
@@ -178,7 +235,7 @@ void showBanner(void)
 	if (fp != NULL)
 		fclose(fp);
 	// if (getcwd(pwd_path, 512) != NULL)
-	//	LOGINFO("%s\n", pwd_path);
+	//	LOGINFOR("%s\n", pwd_path);
 }
 #if 0
 int main()
