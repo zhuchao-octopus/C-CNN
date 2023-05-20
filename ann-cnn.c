@@ -2283,6 +2283,7 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 	else
 	{
 		pFile = fopen(NEURALNET_CNN_WEIGHT_FILE_NAME, "rb");
+		name = NEURALNET_CNN_WEIGHT_FILE_NAME;
 	}
 	
 	if (pFile != NULL)
@@ -2322,6 +2323,7 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 				break;
 			}
 		}
+		LOGINFOR("Loaded weights from file %s", name);
 		fclose(pFile);
 	}
 	//if (name != NULL)

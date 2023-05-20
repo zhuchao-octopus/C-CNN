@@ -612,7 +612,7 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 				PNeuralNetCNN->trainning.trainingAccuracy++;
 			}
 			PNeuralNetCNN->totalTime = GetTimestamp() - elapsed_time_ms;
-		  
+			NeuralNetStartPrediction(PNeuralNetCNN);
 			#ifdef PLATFORM_STM32
 			PNeuralNetCNN->printTrainningInfor(PNeuralNetCNN);
 			#else PLATFORM_WINDOWS
@@ -633,7 +633,6 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 
 		if (PNeuralNetCNN->trainning.sampleCount % CIFAR_TRAINNING_IMAGE_SAVINT_COUNT == 0)
 		{
-			NeuralNetStartPrediction(PNeuralNetCNN);
 			if (PNeuralNetCNN->trainning.trainingSaving)
 				PNeuralNetCNN->save(PNeuralNetCNN);
 		}
@@ -682,7 +681,7 @@ void PrintTrainningInfor()
 #if 1
 	if (strcmp(PNeuralNetCNN_Cifar10->name, "Cifar10") == 0 && PNeuralNetCNN_Cifar10->trainning.sampleCount>0)
 	{
-		LOGINFO("Neural Net Name :%06s", PNeuralNetCNN_Cifar10->name);
+		LOGINFO("NeuralNetName   :%06s", PNeuralNetCNN_Cifar10->name);
 		LOGINFO("DatasetTotal    :%06d", PNeuralNetCNN_Cifar10->trainning.datasetTotal);
 		LOGINFO("DatasetIndex    :%06d", PNeuralNetCNN_Cifar10->trainning.trinning_dataset_index);
 		LOGINFO("EpochCount      :%06d", PNeuralNetCNN_Cifar10->trainning.epochCount);
@@ -700,7 +699,7 @@ void PrintTrainningInfor()
 		if (PNeuralNetCNN_Cifar10->trainning.iterations > 0)
 			avg_iterations_time = PNeuralNetCNN_Cifar10->totalTime / PNeuralNetCNN_Cifar10->trainning.iterations;
 
-		LOGINFO("TotalElapsedTime:%05lld", PNeuralNetCNN_Cifar10->totalTime);
+		LOGINFO("TotalElapsedTime:%08lld", PNeuralNetCNN_Cifar10->totalTime);
 		LOGINFO("ForwardTime     :%05lld", PNeuralNetCNN_Cifar10->fwTime);
 		LOGINFO("BackwardTime    :%05lld", PNeuralNetCNN_Cifar10->bwTime);
 		LOGINFO("OptimTime       :%05lld", PNeuralNetCNN_Cifar10->optimTime);
@@ -729,7 +728,7 @@ void PrintTrainningInfor()
 		if (PNeuralNetCNN_Cifar100->trainning.iterations > 0)
 			avg_iterations_time = PNeuralNetCNN_Cifar100->totalTime / PNeuralNetCNN_Cifar100->trainning.iterations;
 
-		LOGINFO("TotalElapsedTime:\t\t%05lld", PNeuralNetCNN_Cifar100->totalTime);
+		LOGINFO("TotalElapsedTime:\t\t%08lld", PNeuralNetCNN_Cifar100->totalTime);
 		LOGINFO("ForwardTime     :\t\t%05lld", PNeuralNetCNN_Cifar100->fwTime);
 		LOGINFO("BackwardTime    :\t\t%05lld", PNeuralNetCNN_Cifar100->bwTime);
 		LOGINFO("OptimTime       :\t\t%05lld", PNeuralNetCNN_Cifar100->optimTime);
