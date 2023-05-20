@@ -5,15 +5,17 @@
  *  Author: M
  ******************************************************************************************************
  ******************************************************************************************************/
+
+#include "ann-cnn.h"
+
 #ifdef PLATFORM_STM32
 #include "usart.h"
 #include "octopus.h"
 #endif
-#include "ann-cnn.h"
 
 char *CNNTypeName[] = {"Input", "Convolution", "ReLu", "Pool", "FullyConnection", "SoftMax", "None"};
 
-void testDSPFloatProcess(float32_t f1, float32_t f2)
+void TestDSPFloatProcess(float32_t f1, float32_t f2)
 {
 	// float32_t fv;
 	// fv = arm_sin_f32(3.1415926 / 7);
@@ -25,7 +27,7 @@ time_t GetTimestamp(void)
 	time_t t = clock();
 	time_t tick = t * 1000 / CLOCKS_PER_SEC;
 	return tick;
-	//return time(NULL);
+	// return time(NULL);
 }
 
 float32_t GenerateGaussRandom(void)
@@ -191,18 +193,18 @@ void TensorFree(TPTensor PTensor)
 	}
 }
 
-void TensorSave(FILE* pFile, TPTensor PTensor)
+void TensorSave(FILE *pFile, TPTensor PTensor)
 {
 	if (pFile == NULL)
 	{
 		LOG("Error opening file NULL");
-		return ;
+		return;
 	}
-	if(PTensor->buffer != NULL && PTensor->length > 0)
-	fwrite(PTensor->buffer, 1, sizeof(float32_t)* PTensor->length, pFile);
+	if (PTensor->buffer != NULL && PTensor->length > 0)
+		fwrite(PTensor->buffer, 1, sizeof(float32_t) * PTensor->length, pFile);
 }
 
-void TensorRead(FILE* pFile, TPTensor PTensor)
+void TensorRead(FILE *pFile, TPTensor PTensor)
 {
 	if (pFile == NULL)
 	{
@@ -718,8 +720,8 @@ void ConvolutionLayerFree(TPConvLayer PConvLayer)
 	VolumeFree(PConvLayer->biases);
 	FiltersFree(PConvLayer->filters);
 
-	if(PConvLayer->filters != NULL)
-	  free(PConvLayer->filters);
+	if (PConvLayer->filters != NULL)
+		free(PConvLayer->filters);
 	free(PConvLayer);
 }
 
@@ -824,9 +826,9 @@ void PoolLayerInit(TPPoolLayer PPoolLayer, TPLayerOption PLayerOption)
 	PPoolLayer->stride = PLayerOption->stride;
 	PPoolLayer->padding = PLayerOption->padding;
 	// PPoolLayer->bias = PLayerOption->bias;
-	//池化核不需要分配张量空间
+	// 池化核不需要分配张量空间
 	PPoolLayer->filter = MakeVolume(PLayerOption->filter_w, PLayerOption->filter_h, PLayerOption->filter_depth);
-	
+
 	PPoolLayer->layer.in_w = PLayerOption->in_w;
 	PPoolLayer->layer.in_h = PLayerOption->in_h;
 	PPoolLayer->layer.in_depth = PLayerOption->in_depth;
@@ -1151,8 +1153,8 @@ void FullyConnLayerFree(TPFullyConnLayer PFullyConnLayer)
 	//{
 	//	PFullyConnLayer->filters->free(PFullyConnLayer->filters->volumes[i]);
 	// }
-	if(PFullyConnLayer->filters!=NULL)
-	  free(PFullyConnLayer->filters);
+	if (PFullyConnLayer->filters != NULL)
+		free(PFullyConnLayer->filters);
 	free(PFullyConnLayer);
 }
 
@@ -1613,7 +1615,7 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPResponse) * (PNeuralNet->trainning.responseCount + 1));
 				if (temp != NULL)
 				{
-					#if 0
+#if 0
 					for (uint16_t w_l = 0; w_l < pResponseResult[i]->filterWeight->length; w_l++)
 					{
 						if (IsFloatOverflow(pResponseResult[i]->filterWeight->buffer[w_l]))
@@ -1630,7 +1632,7 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 							grads_flow = true;
 						}
 					}
-					#endif
+#endif
 					PNeuralNet->trainning.pResponseResults = temp;
 					PNeuralNet->trainning.pResponseResults[PNeuralNet->trainning.responseCount] = pResponseResult[i];
 					PNeuralNet->trainning.responseCount++;
@@ -1669,7 +1671,7 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPResponse) * (PNeuralNet->trainning.responseCount + 1));
 				if (temp != NULL)
 				{
-					#if 0
+#if 0
 					for (uint16_t w_l = 0; w_l < pResponseResult[i]->filterWeight->length; w_l++)
 					{
 						if (IsFloatOverflow(pResponseResult[i]->filterWeight->buffer[w_l]))
@@ -1686,7 +1688,7 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 							grads_flow = true;
 						}
 					}
-					#endif
+#endif
 					PNeuralNet->trainning.pResponseResults = temp;
 					PNeuralNet->trainning.pResponseResults[PNeuralNet->trainning.responseCount] = pResponseResult[i];
 					PNeuralNet->trainning.responseCount++;
@@ -1974,60 +1976,60 @@ void NeuralNetPrintLayersInfor(TPNeuralNet PNeuralNet)
 void NeuralNetPrintTrainningInfor(TPNeuralNet PNeuralNet)
 {
 	time_t avg_iterations_time = 0;
-	#define FORMATD = "%06d\n"
-	#define FORMATF = "%9.6f\n"
-	#if 1
-	LOGINFOR("DatasetTotal:%06d",PNeuralNet->trainning.datasetTotal);
-	LOGINFOR("DatasetIndex:%06d",PNeuralNet->trainning.trinning_dataset_index);
-	LOGINFOR("EpochCount  :%06d",PNeuralNet->trainning.epochCount);
-	LOGINFOR("SampleCount :%06d",PNeuralNet->trainning.sampleCount);
-	LOGINFOR("LabelIndex  :%06d",PNeuralNet->trainning.labelIndex);
-	LOGINFOR("BatchCount  :%06d",PNeuralNet->trainning.batchCount);
-	LOGINFOR("Iterations  :%06d",PNeuralNet->trainning.iterations);
+#define FORMATD = "%06d\n"
+#define FORMATF = "%9.6f\n"
+#if 1
+	LOGINFOR("DatasetTotal:%06d", PNeuralNet->trainning.datasetTotal);
+	LOGINFOR("DatasetIndex:%06d", PNeuralNet->trainning.trinning_dataset_index);
+	LOGINFOR("EpochCount  :%06d", PNeuralNet->trainning.epochCount);
+	LOGINFOR("SampleCount :%06d", PNeuralNet->trainning.sampleCount);
+	LOGINFOR("LabelIndex  :%06d", PNeuralNet->trainning.labelIndex);
+	LOGINFOR("BatchCount  :%06d", PNeuralNet->trainning.batchCount);
+	LOGINFOR("Iterations  :%06d", PNeuralNet->trainning.iterations);
 
-	LOGINFOR("AverageCostLoss :%.6f",	PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount);
-	LOGINFOR("L1_decay_loss   :%.6f",PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount);
-	LOGINFOR("L2_decay_loss   :%.6f",PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount);
-	LOGINFOR("TrainingAccuracy:%.6f",PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount);
-	LOGINFOR("TestingAccuracy :%.6f",PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
+	LOGINFOR("AverageCostLoss :%.6f", PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount);
+	LOGINFOR("L1_decay_loss   :%.6f", PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount);
+	LOGINFOR("L2_decay_loss   :%.6f", PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount);
+	LOGINFOR("TrainingAccuracy:%.6f", PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount);
+	LOGINFOR("TestingAccuracy :%.6f", PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
 
 	if (PNeuralNet->trainning.iterations > 0)
 		avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
 
-	LOGINFOR("TotalElapsedTime:%lld",PNeuralNet->totalTime);
-	LOGINFOR("ForwardTime     :%05lld",PNeuralNet->fwTime);
+	LOGINFOR("TotalElapsedTime:%lld", PNeuralNet->totalTime);
+	LOGINFOR("ForwardTime     :%05lld", PNeuralNet->fwTime);
 	LOGINFOR("BackwardTime    :%05lld", PNeuralNet->bwTime);
-	LOGINFOR("OptimTime       :%05lld",PNeuralNet->optimTime);
-	LOGINFOR("AvgBatchTime    :%05lld",avg_iterations_time);
-	LOGINFOR("AvgSampleTime   :%05lld",PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
-	#else
+	LOGINFOR("OptimTime       :%05lld", PNeuralNet->optimTime);
+	LOGINFOR("AvgBatchTime    :%05lld", avg_iterations_time);
+	LOGINFOR("AvgSampleTime   :%05lld", PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
+#else
 	LOGINFOR("DatasetTotal:%06d DatasetIndex:%06d EpochCount:%06d SampleCount:%06d LabelIndex:%06d BatchCount:%06d Iterations:%06d",
-			PNeuralNet->trainning.datasetTotal,
-			PNeuralNet->trainning.trinning_dataset_index,
-			PNeuralNet->trainning.epochCount,
-			PNeuralNet->trainning.sampleCount,
-			PNeuralNet->trainning.labelIndex,
-			PNeuralNet->trainning.batchCount,
-		    PNeuralNet->trainning.iterations);
+			 PNeuralNet->trainning.datasetTotal,
+			 PNeuralNet->trainning.trinning_dataset_index,
+			 PNeuralNet->trainning.epochCount,
+			 PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.labelIndex,
+			 PNeuralNet->trainning.batchCount,
+			 PNeuralNet->trainning.iterations);
 
 	LOGINFOR("AvgCostLoss:%.6f L1_decay_loss:%.6f L2_decay_loss:%.6f TrainingAccuracy:%.6f TestingAccuracy:%.6f",
-			PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
-			PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
-			PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
-			PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
-			PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
-	
-    if(PNeuralNet->trainning.iterations > 0)
-	  avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
+			 PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
+
+	if (PNeuralNet->trainning.iterations > 0)
+		avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
 
 	LOGINFOR("TotalTime:%lld ForwardTime:%05lld BackwardTime:%05lld OptimTime:%05lld AvgBatchTime:%05lld AvgSampleTime:%05lld",
-		    PNeuralNet->totalTime,
-			PNeuralNet->fwTime,
-			PNeuralNet->bwTime,
-			PNeuralNet->optimTime,
-	    	avg_iterations_time,
-			PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
-	#endif
+			 PNeuralNet->totalTime,
+			 PNeuralNet->fwTime,
+			 PNeuralNet->bwTime,
+			 PNeuralNet->optimTime,
+			 avg_iterations_time,
+			 PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
+#endif
 }
 
 void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
@@ -2169,21 +2171,21 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
-			case Optm_Adagrad:			
+			case Optm_Adagrad:
 				temp = sumPTensor1->buffer[j] + gradij * gradij;
 				sumPTensor1->buffer[j] = temp;
 				dx = -PNeuralNet->trainningParam.learning_rate / sqrt(sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps) * gradij;
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
 			case Optm_Adadelta:
-				sumPTensor1->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor1->buffer[j] + (1- PNeuralNet->trainningParam.momentum)* gradij * gradij;
-				dx = -sqrt((sumPTensor2->buffer[j]+ PNeuralNet->trainningParam.eps)/ (sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps)) * gradij;
+				sumPTensor1->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor1->buffer[j] + (1 - PNeuralNet->trainningParam.momentum) * gradij * gradij;
+				dx = -sqrt((sumPTensor2->buffer[j] + PNeuralNet->trainningParam.eps) / (sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps)) * gradij;
 				sumPTensor2->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor2->buffer[j] + (1 - PNeuralNet->trainningParam.momentum) * dx * dx;
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
 			default:
 				break;
-			}//switch
+			} // switch
 			grads->buffer[j] = 0;
 		}
 	}
@@ -2202,23 +2204,23 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	PNeuralNet->optimTime = GetTimestamp() - starTick;
 }
 
-
 void NeuralNetPredict(TPNeuralNet PNeuralNet, TPVolume PVolume)
 {
 	/////////////////////////////////////////////////////////////////////////////////////
 	PNeuralNet->forward(PNeuralNet, PVolume);
-	PNeuralNet->getCostLoss(PNeuralNet);	
+	PNeuralNet->getCostLoss(PNeuralNet);
 }
 /// @brief ///////////////////////////////////////////////////////////////////////
 /// @param PNeuralNet
 void NeuralNetSave(TPNeuralNet PNeuralNet)
 {
-	FILE* pFile = NULL;
-	char* name = NULL;
-	if (PNeuralNet == NULL) return;
+	FILE *pFile = NULL;
+	char *name = NULL;
+	if (PNeuralNet == NULL)
+		return;
 	if (PNeuralNet->name != NULL)
 	{
-		name = (char*)malloc(strlen(PNeuralNet->name) + strlen(NEURALNET_CNN_WEIGHT_FILE_NAME));
+		name = (char *)malloc(strlen(PNeuralNet->name) + strlen(NEURALNET_CNN_WEIGHT_FILE_NAME));
 		sprintf(name, "%s%s", PNeuralNet->name, NEURALNET_CNN_WEIGHT_FILE_NAME);
 		pFile = fopen(name, "wb");
 	}
@@ -2239,7 +2241,7 @@ void NeuralNetSave(TPNeuralNet PNeuralNet)
 			{
 				for (uint16_t out_d = 0; out_d < ((TPConvLayer)pNetLayer)->filters->filterNumber; out_d++)
 				{
-					TensorSave(pFile,((TPConvLayer)pNetLayer)->filters->volumes[out_d]->weight);
+					TensorSave(pFile, ((TPConvLayer)pNetLayer)->filters->volumes[out_d]->weight);
 				}
 				TensorSave(pFile, ((TPConvLayer)pNetLayer)->biases->weight);
 				break;
@@ -2265,18 +2267,19 @@ void NeuralNetSave(TPNeuralNet PNeuralNet)
 		}
 		fclose(pFile);
 	}
-	//if (name != NULL)
+	// if (name != NULL)
 	//	free(name);
 }
 
 void NeuralNetLoad(TPNeuralNet PNeuralNet)
 {
-	FILE* pFile = NULL;
-	char* name = NULL;
-	if (PNeuralNet == NULL) return;
+	FILE *pFile = NULL;
+	char *name = NULL;
+	if (PNeuralNet == NULL)
+		return;
 	if (PNeuralNet->name != NULL)
 	{
-		name = (char*)malloc(strlen(PNeuralNet->name) + strlen(NEURALNET_CNN_WEIGHT_FILE_NAME));
+		name = (char *)malloc(strlen(PNeuralNet->name) + strlen(NEURALNET_CNN_WEIGHT_FILE_NAME));
 		sprintf(name, "%s%s", PNeuralNet->name, NEURALNET_CNN_WEIGHT_FILE_NAME);
 		pFile = fopen(name, "rb");
 	}
@@ -2285,7 +2288,7 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 		pFile = fopen(NEURALNET_CNN_WEIGHT_FILE_NAME, "rb");
 		name = NEURALNET_CNN_WEIGHT_FILE_NAME;
 	}
-	
+
 	if (pFile != NULL)
 	{
 		for (uint16_t layerIndex = PNeuralNet->depth - 1; layerIndex >= 0; layerIndex--)
@@ -2326,7 +2329,7 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 		LOGINFOR("Loaded weights from file %s", name);
 		fclose(pFile);
 	}
-	//if (name != NULL)
+	// if (name != NULL)
 	//	free(name);
 }
 
@@ -2338,7 +2341,7 @@ char *NeuralNetGetLayerName(TLayerType LayerType)
 TPNeuralNet NeuralNetCNNCreate(char *name)
 {
 	TPNeuralNet PNeuralNet = malloc(sizeof(TNeuralNet));
-	
+
 	if (PNeuralNet == NULL)
 	{
 		LOGERROR("PNeuralNet==NULL!");
@@ -2365,7 +2368,7 @@ TPNeuralNet NeuralNetCNNCreate(char *name)
 	PNeuralNet->getName = NeuralNetGetLayerName;
 }
 
-int NeuralNetAddLayer(TPNeuralNet PNeuralNet,TLayerOption LayerOption)
+int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption)
 {
 	TPLayer pNetLayer = NULL;
 	if (PNeuralNet == NULL)
@@ -2373,17 +2376,17 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet,TLayerOption LayerOption)
 	switch (LayerOption.LayerType)
 	{
 	case Layer_Type_Input:
-		//LayerOption.in_w = LayerOption.in_w;
-		//LayerOption.in_h = LayerOption.in_h;
-		//LayerOption.in_depth = LayerOption.in_depth;
+		// LayerOption.in_w = LayerOption.in_w;
+		// LayerOption.in_h = LayerOption.in_h;
+		// LayerOption.in_depth = LayerOption.in_depth;
 		if (PNeuralNet->depth > 0)
-			return  LayerOption.LayerType + NEURALNET_ERROR_BASE;
+			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
 		PNeuralNet->init(PNeuralNet, &LayerOption);
 		break;
 	case Layer_Type_Convolution:
 	{
 		if (PNeuralNet->depth <= 0)
-			return  LayerOption.LayerType + NEURALNET_ERROR_BASE;
+			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
 		pNetLayer = PNeuralNet->layers[PNeuralNet->depth - 1];
 		LayerOption.LayerType = Layer_Type_Convolution;
 		LayerOption.in_w = pNetLayer->out_w;
@@ -2404,7 +2407,7 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet,TLayerOption LayerOption)
 	}
 	case Layer_Type_ReLu:
 		if (PNeuralNet->depth <= 0)
-			return  LayerOption.LayerType + NEURALNET_ERROR_BASE;
+			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
 		pNetLayer = PNeuralNet->layers[PNeuralNet->depth - 1];
 		LayerOption.in_w = pNetLayer->out_w;
 		LayerOption.in_h = pNetLayer->out_h;
@@ -2414,7 +2417,7 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet,TLayerOption LayerOption)
 		break;
 	case Layer_Type_Pool:
 		if (PNeuralNet->depth <= 0)
-			return  LayerOption.LayerType + NEURALNET_ERROR_BASE;
+			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
 		pNetLayer = PNeuralNet->layers[PNeuralNet->depth - 1];
 		LayerOption.LayerType = Layer_Type_Pool;
 		LayerOption.in_w = pNetLayer->out_w;
@@ -2429,7 +2432,7 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet,TLayerOption LayerOption)
 	case Layer_Type_FullyConnection:
 	{
 		if (PNeuralNet->depth <= 0)
-			return  LayerOption.LayerType + NEURALNET_ERROR_BASE;
+			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
 		pNetLayer = PNeuralNet->layers[PNeuralNet->depth - 1];
 		LayerOption.in_w = pNetLayer->out_w;
 		LayerOption.in_h = pNetLayer->out_h;
@@ -2451,7 +2454,7 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet,TLayerOption LayerOption)
 	}
 	case Layer_Type_SoftMax:
 		if (PNeuralNet->depth <= 0)
-			return  LayerOption.LayerType + NEURALNET_ERROR_BASE;
+			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
 		pNetLayer = PNeuralNet->layers[PNeuralNet->depth - 1];
 		LayerOption.in_w = pNetLayer->out_w;
 		LayerOption.in_h = pNetLayer->out_h;

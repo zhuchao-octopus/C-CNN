@@ -54,7 +54,7 @@ typedef int uint32_t;
 typedef short uint16_t;
 typedef bool bool_t;
 typedef unsigned char uint8_t;
-// #define DSP_SQRT_FUNCTION sqrt
+
 #define CNNLOG printf
 #define LOG printf
 #define LOGLOG printf
@@ -63,9 +63,9 @@ typedef unsigned char uint8_t;
 #endif
 
 #ifdef __DEBUG__LOG__
-#define LOGINFO(format, ...)  LOGLOG("[Infor][%-9.9s][%s]:" format "\n", __FILE__, __func__, ##__VA_ARGS__)
+#define LOGINFO(format, ...)   LOGLOG("[Infor][%-9.9s][%s]:" format "\n", __FILE__, __func__, ##__VA_ARGS__)
 #define LOGINFOR(format, ...)  LOGLOG("[Infor][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
-#define LOGERROR(format, ...) LOGLOG("[Error][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+#define LOGERROR(format, ...)  LOGLOG("[Error][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #else
 #define LOGINFO(format, ...)  
 #define LOGINFOR(format, ...)
@@ -442,8 +442,7 @@ DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 DLLEXPORT void NeuralNetInit_Cifar10(void);
 DLLEXPORT void NeuralNetInit_Cifar100(void);
 
-
-DLLEXPORT void testDSPFloatProcess(float32_t f1, float32_t f2);
-DLLEXPORT time_t GetTimestamp(void);
+void TestDSPFloatProcess(float32_t f1, float32_t f2);
+time_t GetTimestamp(void);
 
 #endif /* _INC_ANN_CNN_H_ */

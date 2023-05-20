@@ -16,13 +16,13 @@
 #include "ann-cnn.h"
 #include "ann-dataset.h"
 
- /////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
 void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
 void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
 void NeuralNetStartPrediction(TPNeuralNet PNeuralNetCNN);
 void PrintTrainningInfor(void);
 /////////////////////////////////////////////////////////////////////////////////////////////
-//定义两个学习网络
+// 定义两个学习网络
 TPNeuralNet PNeuralNetCNN_Cifar10 = NULL;
 TPNeuralNet PNeuralNetCNN_Cifar100 = NULL;
 #define NET_CIFAR10_NAME "Cifar10"
@@ -193,8 +193,8 @@ void NeuralNetInit_Cifar10(void)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 
-	//LayerOption.filter_w = 1;
-	//LayerOption.filter_h = 1;
+	// LayerOption.filter_w = 1;
+	// LayerOption.filter_h = 1;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
 	LayerOption.filter_number = 10;
 
@@ -218,8 +218,8 @@ void NeuralNetInit_Cifar10(void)
 
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
-	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h;//10;
-	
+	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h; // 10;
+
 	PNeuralNetCNN_Cifar10->init(PNeuralNetCNN_Cifar10, &LayerOption);
 	pNetLayer = PNeuralNetCNN_Cifar10->layers[PNeuralNetCNN_Cifar10->depth - 1];
 	// LOG("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d\n", PNeuralNetCNN->depth - 1, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
@@ -227,7 +227,6 @@ void NeuralNetInit_Cifar10(void)
 	// LOG("\n////////////////////////////////////////////////////////////////////////////////////\n");
 	PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar10);
 }
-
 
 /// @brief ///////////////////////////////////////////////////////
 /// @param
@@ -387,8 +386,8 @@ void NeuralNetInit_Cifar100(void)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 
-	//LayerOption.filter_w = 1;
-	//LayerOption.filter_h = 1;
+	// LayerOption.filter_w = 1;
+	// LayerOption.filter_h = 1;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
 	LayerOption.filter_number = 100;
 
@@ -412,7 +411,7 @@ void NeuralNetInit_Cifar100(void)
 
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
-	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h;//10;
+	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h; // 10;
 
 	PNeuralNetCNN_Cifar100->init(PNeuralNetCNN_Cifar100, &LayerOption);
 	pNetLayer = PNeuralNetCNN_Cifar100->layers[PNeuralNetCNN_Cifar100->depth - 1];
@@ -571,9 +570,8 @@ void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN)
 		inputVolCount, outputVolCount, biasCount, others, filterCount);
 
 	LOG("[NeuralNetCNNInfor]:filter_length:%d out_length:%d filter_size:%.2fk out_size:%.2fk total_size:%.2fk",
-	   filterLength, outLength, filter_size, out_size, totalSize);
+		filterLength, outLength, filter_size, out_size, totalSize);
 }
-
 
 void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 {
@@ -590,7 +588,7 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 	{
 		if (!hide_cursor)
 		{
-			CONSOLE_CURSOR_INFO CursorInfo = { 1, 0 };
+			CONSOLE_CURSOR_INFO CursorInfo = {1, 0};
 			SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &CursorInfo);
 			hide_cursor = true;
 		}
@@ -613,15 +611,15 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 			}
 			PNeuralNetCNN->totalTime = GetTimestamp() - elapsed_time_ms;
 			NeuralNetStartPrediction(PNeuralNetCNN);
-			#ifdef PLATFORM_STM32
+#ifdef PLATFORM_STM32
 			PNeuralNetCNN->printTrainningInfor(PNeuralNetCNN);
-			#else PLATFORM_WINDOWS
+#else PLATFORM_WINDOWS
 			PrintTrainningInfor();
-			#endif	
+#endif
 		}
 		else
 		{
-			LOGINFOR("pTrainningImage NULL trinning_dataset_index=%d", PNeuralNetCNN->trainning.trinning_dataset_index);
+			LOGINFOR("TrainningImage NULL，Dataset is missing index=%d", PNeuralNetCNN->trainning.trinning_dataset_index);
 		}
 
 		PNeuralNetCNN->trainning.trinning_dataset_index++;
@@ -679,7 +677,7 @@ void PrintTrainningInfor()
 #define FORMATF = "%9.6f\n"
 
 #if 1
-	if (strcmp(PNeuralNetCNN_Cifar10->name, "Cifar10") == 0 && PNeuralNetCNN_Cifar10->trainning.sampleCount>0)
+	if (strcmp(PNeuralNetCNN_Cifar10->name, "Cifar10") == 0 && PNeuralNetCNN_Cifar10->trainning.sampleCount > 0)
 	{
 		LOGINFO("NeuralNetName   :%06s", PNeuralNetCNN_Cifar10->name);
 		LOGINFO("DatasetTotal    :%06d", PNeuralNetCNN_Cifar10->trainning.datasetTotal);
@@ -705,10 +703,10 @@ void PrintTrainningInfor()
 		LOGINFO("OptimTime       :%05lld", PNeuralNetCNN_Cifar10->optimTime);
 		LOGINFO("AvgBatchTime    :%05lld", avg_iterations_time);
 		LOGINFO("AvgSampleTime   :%05lld", PNeuralNetCNN_Cifar10->totalTime / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		//if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
+		// if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
 		printf("\033[19A");
 	}
-	if (strcmp(PNeuralNetCNN_Cifar100->name, "Cifar100")==0 && PNeuralNetCNN_Cifar100->trainning.sampleCount>0)
+	if (strcmp(PNeuralNetCNN_Cifar100->name, "Cifar100") == 0 && PNeuralNetCNN_Cifar100->trainning.sampleCount > 0)
 	{
 		LOGINFO("NeuralNetName   :\t\t%06s", PNeuralNetCNN_Cifar100->name);
 		LOGINFO("DatasetTotal    :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.datasetTotal);
@@ -734,36 +732,36 @@ void PrintTrainningInfor()
 		LOGINFO("OptimTime       :\t\t%05lld", PNeuralNetCNN_Cifar100->optimTime);
 		LOGINFO("AvgBatchTime    :\t\t%05lld", avg_iterations_time);
 		LOGINFO("AvgSampleTime   :\t\t%05lld", PNeuralNetCNN_Cifar100->totalTime / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		//if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
+		// if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
 		printf("\033[19A");
 	}
-	
+
 #else
 	LOGINFOR("DatasetTotal:%06d DatasetIndex:%06d EpochCount:%06d SampleCount:%06d LabelIndex:%06d BatchCount:%06d Iterations:%06d",
-		PNeuralNet->trainning.datasetTotal,
-		PNeuralNet->trainning.trinning_dataset_index,
-		PNeuralNet->trainning.epochCount,
-		PNeuralNet->trainning.sampleCount,
-		PNeuralNet->trainning.labelIndex,
-		PNeuralNet->trainning.batchCount,
-		PNeuralNet->trainning.iterations);
+			 PNeuralNet->trainning.datasetTotal,
+			 PNeuralNet->trainning.trinning_dataset_index,
+			 PNeuralNet->trainning.epochCount,
+			 PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.labelIndex,
+			 PNeuralNet->trainning.batchCount,
+			 PNeuralNet->trainning.iterations);
 
 	LOGINFOR("AvgCostLoss:%.6f L1_decay_loss:%.6f L2_decay_loss:%.6f TrainingAccuracy:%.6f TestingAccuracy:%.6f",
-		PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
-		PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
-		PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
-		PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
-		PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
+			 PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.testingAccuracy / PNeuralNet->trainning.sampleCount);
 
 	if (PNeuralNet->trainning.iterations > 0)
 		avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
 
 	LOGINFOR("TotalTime:%lld ForwardTime:%05lld BackwardTime:%05lld OptimTime:%05lld AvgBatchTime:%05lld AvgSampleTime:%05lld",
-		PNeuralNet->totalTime,
-		PNeuralNet->fwTime,
-		PNeuralNet->bwTime,
-		PNeuralNet->optimTime,
-		avg_iterations_time,
-		PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
+			 PNeuralNet->totalTime,
+			 PNeuralNet->fwTime,
+			 PNeuralNet->bwTime,
+			 PNeuralNet->optimTime,
+			 avg_iterations_time,
+			 PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
 #endif
 }
