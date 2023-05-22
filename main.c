@@ -24,11 +24,12 @@ void showBanner(void);
 /// 
 int main()
 {
-	char str[32] = "";
-	char net_name[32] = "";
-	int cmd = 0;
-	int layer = 0;
-	int lines = 0;
+	char cmd_str[32] = "";
+	char net_name[32] = NET_CIFAR10_NAME;
+	int net_cmd = 0;
+	int net_layer = 0;
+	int net_io = 0; //0:output,1 input,2:filters
+	int log_lines = 0;
 	showBanner();
 #if defined(__STDC_VERSION__)
 	printf("__STDC_VERSION__ Version %ld\n", __STDC_VERSION__);
@@ -48,24 +49,24 @@ int main()
 
 	while (true)
 	{
-		printf("\033[%dB", lines);
-		lines = 20;
+		printf("\033[%dB", log_lines);
+		log_lines = 20;
 		// printf("\n");
 		printf("\nplease select a menu item to continue...\n");
 		printf("00: Exit.\n");
-		printf("01: Print weight    usage:1 10 Cifar10,three parameters,the first is command,the second is layer index and the third is net name.\n");
+		printf("01: Print weight    usage:1 10 Cifar10,three parameters,the first is command,the second is net_layer index and the third is net name.\n");
 		printf("02: Print gradients usage:2 10 Cifar10,it is same as print weight.\n");
 		printf("03: Print neural network information,displays the network structure information.\n");
 
 		printf("04: Start trainning CIFAR-10 one by one,learn one CIFAR-10 picture at a time.\n");
 		printf("05: Start trainning CIFAR-10 batch by batch,learn a batch CIFAR-10 picture at a time.\n");
-		printf("06: Start trainning CIFAR-10 without saving weights,learning of the CIFAR-10 50,000 images do not save weights.\n");
-		printf("07: Start trainning CIFAR-10 and saving weights,learning of the CIFAR-10 50,000 images and save weights to file cnn.w.\n");
+		printf("06: Start trainning CIFAR-10 learning of the CIFAR-10 50,000 images but do not save weights to file.\n");
+		printf("07: Start trainning CIFAR-10 learning of the CIFAR-10 50,000 images and saving weights to file cnn.w.\n");
 
 		printf("08: Start trainning CIFAR-100 one by one,learn one CIFAR-100 picture at a time.\n");
 		printf("09: Start trainning CIFAR-100 batch by batch,learn a batch CIFAR-100 picture at a time.\n");
-		printf("10: Start trainning CIFAR-100 without saving weights,learning of the CIFAR-100 50,000 images do not save weights.\n");
-		printf("11: Start trainning CIFAR-100 and saving weights,learning of the CIFAR-100 50,000 images and save weights to file cnn.w.\n");
+		printf("10: Start trainning CIFAR-100 learning of the CIFAR-100 50,000 images but do not save weights to file.\n");
+		printf("11: Start trainning CIFAR-100 learning of the CIFAR-100 50,000 images and saving weights to file cnn.w.\n");
 
 		printf("12: Start trainning CIFAR-100 and CIFAR-10 \n");
 
@@ -73,27 +74,34 @@ int main()
 		printf("14: Load weights from file cnn.w\n");
 		printf("\nplease select a menu item to continue:");
 
-		gets(str);
-		sscanf(str, "%d %d %s", &cmd, &layer, net_name);
-		printf("Command:%d Layer Index:%d Net Name:%s\n", cmd, layer, net_name);
+		gets(cmd_str);
+		sscanf(cmd_str, "%d %d %d %s", &net_cmd, &net_layer,&net_io, net_name);
+		printf("command:%d layer:%d io:%d name:%s\n", net_cmd, net_layer, net_io, net_name);
 
-		switch (cmd)
+		switch (net_cmd)
 		{
 		case 0:
-			CloseDataset();
+			CloseTrainningDataset();
+			CloseTestingDataset();
 			return 0;
 		case 1:
 			if (PNeuralNetCNN_Cifar10 != NULL && (strcmp(net_name, NET_CIFAR10_NAME) == 0))
 			{
-				PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, layer, 1);
-				PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, layer, 0);
-				PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, layer, 2);
+				switch (net_io)
+				{
+				case 0:	PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, net_layer, 0); break;
+				case 1:	PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, net_layer, 1); break;
+				case 2:	PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, net_layer, 2); break;
+				}
 			}
 			else if (PNeuralNetCNN_Cifar100 != NULL && (strcmp(net_name, NET_CIFAR100_NAME) == 0))
 			{
-				PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, layer, 1);
-				PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, layer, 0);
-				PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, layer, 2);
+				switch (net_io)
+				{
+				case 0:	PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, net_layer, 0); break;
+				case 1:	PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, net_layer, 1); break;
+				case 2:	PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, net_layer, 2); break;
+				}
 			}
 			else
 				LOG("Need three parameters");
@@ -101,15 +109,21 @@ int main()
 		case 2:
 			if (PNeuralNetCNN_Cifar10 != NULL && (strcmp(net_name, NET_CIFAR10_NAME) == 0))
 			{
-				PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, layer, 1);
-				PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, layer, 0);
-				PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, layer, 2);
+				switch (net_io)
+				{
+				case 0:	PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, net_layer, 0); break;
+				case 1:	PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, net_layer, 1); break;
+				case 2:	PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, net_layer, 2); break;
+				}
 			}
 			else if (PNeuralNetCNN_Cifar100 != NULL && (strcmp(net_name, NET_CIFAR100_NAME) == 0))
 			{
-				PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, layer, 1);
-				PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, layer, 0);
-				PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, layer, 2);
+				switch (net_io)
+				{
+				case 0:	PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, net_layer, 0); break;
+				case 1:	PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, net_layer, 1); break;
+				case 2:	PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, net_layer, 2); break;
+				}
 			}
 			else
 				LOG("Need three parameters");
@@ -208,14 +222,13 @@ int main()
 			break;
 		case 13:
 			LOGINFOR("NeuralNet saving...");
-			PNeuralNetCNN_Cifar100->save(PNeuralNetCNN_Cifar10);
-			PNeuralNetCNN_Cifar100->save(PNeuralNetCNN_Cifar100);
+			PNeuralNetCNN_Cifar100->saveWeights(PNeuralNetCNN_Cifar10);
+			PNeuralNetCNN_Cifar100->saveWeights(PNeuralNetCNN_Cifar100);
 			break;
 		case 14:
 			LOGINFOR("NeuralNet loading...");
-			PNeuralNetCNN_Cifar100->load(PNeuralNetCNN_Cifar10);
-
-			PNeuralNetCNN_Cifar100->load(PNeuralNetCNN_Cifar100);
+			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar10);
+			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar100);
 			break;
 		default:
 			printf("\n");

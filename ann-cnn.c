@@ -204,7 +204,7 @@ void TensorSave(FILE *pFile, TPTensor PTensor)
 		fwrite(PTensor->buffer, 1, sizeof(float32_t) * PTensor->length, pFile);
 }
 
-void TensorRead(FILE *pFile, TPTensor PTensor)
+void TensorLoad(FILE *pFile, TPTensor PTensor)
 {
 	if (pFile == NULL)
 	{
@@ -491,8 +491,8 @@ void MatrixMultip(TPTensor PInTenser, TPTensor PFilter, TPTensor out)
 void ConvolutionLayerInit(TPConvLayer PConvLayer, TPLayerOption PLayerOption)
 {
 	PConvLayer->layer.LayerType = PLayerOption->LayerType;
-	PConvLayer->l1_decay_mul = PLayerOption->l1_decay_mul;
-	PConvLayer->l2_decay_mul = PLayerOption->l2_decay_mul;
+	PConvLayer->l1_decay_rate = PLayerOption->l1_decay_rate;
+	PConvLayer->l2_decay_rate = PLayerOption->l2_decay_rate;
 	PConvLayer->stride = PLayerOption->stride;
 	PConvLayer->padding = PLayerOption->padding;
 	PConvLayer->bias = PLayerOption->bias;
@@ -686,8 +686,8 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 		{
 			PResponse->filterWeight = PConvLayer->filters->volumes[out_d]->weight;
 			PResponse->filterGrads = PConvLayer->filters->volumes[out_d]->weight_d;
-			PResponse->l1_decay_mul = PConvLayer->l1_decay_mul;
-			PResponse->l2_decay_mul = PConvLayer->l2_decay_mul;
+			PResponse->l1_decay_rate = PConvLayer->l1_decay_rate;
+			PResponse->l2_decay_rate = PConvLayer->l2_decay_rate;
 			PResponse->fillZero = TensorFillZero;
 			PResponse->free = TensorFree;
 			tPResponses[out_d] = PResponse;
@@ -699,8 +699,8 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 	{
 		PResponse->filterWeight = PConvLayer->biases->weight;
 		PResponse->filterGrads = PConvLayer->biases->weight_d;
-		PResponse->l1_decay_mul = 0;
-		PResponse->l2_decay_mul = 0;
+		PResponse->l1_decay_rate = 0;
+		PResponse->l2_decay_rate = 0;
 		PResponse->fillZero = TensorFillZero;
 		PResponse->free = TensorFree;
 		tPResponses[PConvLayer->layer.out_depth] = PResponse;
@@ -732,8 +732,8 @@ void ConvolutionLayerFree(TPConvLayer PConvLayer)
 void ReluLayerInit(TPReluLayer PReluLayer, TPLayerOption PLayerOption)
 {
 	PReluLayer->layer.LayerType = PLayerOption->LayerType;
-	// PReluLayer->l1_decay_mul = LayerOption.l1_decay_mul;
-	// PReluLayer->l2_decay_mul = LayerOption.l2_decay_mul;
+	// PReluLayer->l1_decay_rate = LayerOption.l1_decay_rate;
+	// PReluLayer->l2_decay_rate = LayerOption.l2_decay_rate;
 	// PReluLayer->stride = LayerOption.stride;
 	// PReluLayer->padding = LayerOption.padding;
 	// PReluLayer->bias = LayerOption.bias;
@@ -821,8 +821,8 @@ void ReluLayerFree(TPReluLayer PReluLayer)
 void PoolLayerInit(TPPoolLayer PPoolLayer, TPLayerOption PLayerOption)
 {
 	PPoolLayer->layer.LayerType = PLayerOption->LayerType;
-	// PPoolLayer->l1_decay_mul = PLayerOption->l1_decay_mul;
-	// PPoolLayer->l2_decay_mul = PLayerOption->l2_decay_mul;
+	// PPoolLayer->l1_decay_rate = PLayerOption->l1_decay_rate;
+	// PPoolLayer->l2_decay_rate = PLayerOption->l2_decay_rate;
 	PPoolLayer->stride = PLayerOption->stride;
 	PPoolLayer->padding = PLayerOption->padding;
 	// PPoolLayer->bias = PLayerOption->bias;
@@ -989,8 +989,8 @@ void PoolLayerFree(TPPoolLayer PPoolLayer)
 void FullyConnLayerInit(TPFullyConnLayer PFullyConnLayer, TPLayerOption PLayerOption)
 {
 	PFullyConnLayer->layer.LayerType = PLayerOption->LayerType;
-	PFullyConnLayer->l1_decay_mul = PLayerOption->l1_decay_mul;
-	PFullyConnLayer->l2_decay_mul = PLayerOption->l2_decay_mul;
+	PFullyConnLayer->l1_decay_rate = PLayerOption->l1_decay_rate;
+	PFullyConnLayer->l2_decay_rate = PLayerOption->l2_decay_rate;
 	// PFullyConnLayer->stride = LayerOption.stride;
 	// PFullyConnLayer->padding = LayerOption.padding;
 	PFullyConnLayer->bias = PLayerOption->bias;
@@ -1122,8 +1122,8 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 		{
 			PResponse->filterWeight = PFullyConnLayer->filters->volumes[out_d]->weight;
 			PResponse->filterGrads = PFullyConnLayer->filters->volumes[out_d]->weight_d;
-			PResponse->l1_decay_mul = PFullyConnLayer->l1_decay_mul;
-			PResponse->l2_decay_mul = PFullyConnLayer->l2_decay_mul;
+			PResponse->l1_decay_rate = PFullyConnLayer->l1_decay_rate;
+			PResponse->l2_decay_rate = PFullyConnLayer->l2_decay_rate;
 			PResponse->fillZero = TensorFillZero;
 			PResponse->free = TensorFree;
 			tPResponses[out_d] = PResponse;
@@ -1134,8 +1134,8 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 	{
 		PResponse->filterWeight = PFullyConnLayer->biases->weight;
 		PResponse->filterGrads = PFullyConnLayer->biases->weight_d;
-		PResponse->l1_decay_mul = 0;
-		PResponse->l2_decay_mul = 0;
+		PResponse->l1_decay_rate = 0;
+		PResponse->l2_decay_rate = 0;
 		PResponse->fillZero = TensorFillZero;
 		PResponse->free = TensorFree;
 		tPResponses[PFullyConnLayer->layer.out_depth] = PResponse;
@@ -1719,12 +1719,11 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 	}
 }
 
-void NeuralNetComputeCostLoss(TPNeuralNet PNeuralNet)
+void NeuralNetComputeCostLoss(TPNeuralNet PNeuralNet, float32_t *CostLoss)
 {
 	TPSoftmaxLayer PSoftmaxLayer = ((TPSoftmaxLayer)PNeuralNet->layers[PNeuralNet->depth - 1]);
 	PSoftmaxLayer->expected_value = PNeuralNet->trainning.labelIndex;
-	PNeuralNet->trainning.cost_loss = PSoftmaxLayer->computeLoss(PSoftmaxLayer);
-	PNeuralNet->trainning.sum_cost_loss = PNeuralNet->trainning.sum_cost_loss + PNeuralNet->trainning.cost_loss;
+	*CostLoss = PSoftmaxLayer->computeLoss(PSoftmaxLayer);
 }
 
 void NeuralNetGetMaxPrediction(TPNeuralNet PNeuralNet, TPPrediction PPrediction)
@@ -1837,7 +1836,7 @@ void NeuralNetPrintWeights(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_t 
 			LOGINFOR("layers[%d] type=%s w=%d h=%d depth=%d filterNumber=%d/%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], ((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth, i, ((TPConvLayer)pNetLayer)->filters->filterNumber);
 			((TPConvLayer)pNetLayer)->filters->volumes[i]->print(((TPConvLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_WEIGHT);
 		}
-		LOG("Biases:");
+		LOGINFOR("biases:w=%d h=%d depth=%d", ((TPConvLayer)pNetLayer)->biases->_w, ((TPConvLayer)pNetLayer)->biases->_h, ((TPConvLayer)pNetLayer)->biases->_depth);
 		((TPConvLayer)pNetLayer)->biases->print(((TPConvLayer)pNetLayer)->biases, PRINTFLAG_WEIGHT);
 	}
 	else if (pNetLayer->LayerType == Layer_Type_FullyConnection)
@@ -1847,7 +1846,7 @@ void NeuralNetPrintWeights(TPNeuralNet PNeuralNet, uint16_t LayerIndex, uint8_t 
 			LOGINFOR("layers[%d] type=%s w=%d h=%d depth=%d filterNumber=%d/%d", LayerIndex, CNNTypeName[pNetLayer->LayerType], ((TPConvLayer)pNetLayer)->filters->_w, ((TPConvLayer)pNetLayer)->filters->_h, ((TPConvLayer)pNetLayer)->filters->_depth, i, ((TPConvLayer)pNetLayer)->filters->filterNumber);
 			((TPFullyConnLayer)pNetLayer)->filters->volumes[i]->print(((TPFullyConnLayer)pNetLayer)->filters->volumes[i], PRINTFLAG_WEIGHT);
 		}
-		LOG("Biases:");
+		LOGINFOR("biases:w=%d h=%d depth=%d", ((TPFullyConnLayer)pNetLayer)->biases->_w, ((TPFullyConnLayer)pNetLayer)->biases->_h, ((TPFullyConnLayer)pNetLayer)->biases->_depth);
 		((TPFullyConnLayer)pNetLayer)->biases->print(((TPFullyConnLayer)pNetLayer)->biases, PRINTFLAG_WEIGHT);
 	}
 	else if (pNetLayer->LayerType == Layer_Type_SoftMax)
@@ -1976,16 +1975,14 @@ void NeuralNetPrintLayersInfor(TPNeuralNet PNeuralNet)
 void NeuralNetPrintTrainningInfor(TPNeuralNet PNeuralNet)
 {
 	time_t avg_iterations_time = 0;
-#define FORMATD = "%06d\n"
-#define FORMATF = "%9.6f\n"
 #if 1
-	LOGINFOR("DatasetTotal:%06d", PNeuralNet->trainning.datasetTotal);
-	LOGINFOR("DatasetIndex:%06d", PNeuralNet->trainning.trinning_dataset_index);
-	LOGINFOR("EpochCount  :%06d", PNeuralNet->trainning.epochCount);
-	LOGINFOR("SampleCount :%06d", PNeuralNet->trainning.sampleCount);
-	LOGINFOR("LabelIndex  :%06d", PNeuralNet->trainning.labelIndex);
-	LOGINFOR("BatchCount  :%06d", PNeuralNet->trainning.batchCount);
-	LOGINFOR("Iterations  :%06d", PNeuralNet->trainning.iterations);
+	LOGINFOR("DatasetTotal    :%08ld  ", PNeuralNet->trainning.datasetTotal);
+	LOGINFOR("DatasetIndex    :%08ld  ", PNeuralNet->trainning.trinning_dataset_index);
+	LOGINFOR("EpochCount      :%08ld  ", PNeuralNet->trainning.epochCount);
+	LOGINFOR("SampleCount     :%08ld  ", PNeuralNet->trainning.sampleCount);
+	LOGINFOR("LabelIndex      :%08ld  ", PNeuralNet->trainning.labelIndex);
+	LOGINFOR("BatchCount      :%08ld  ", PNeuralNet->trainning.batchCount);
+	LOGINFOR("Iterations      :%08ld  ", PNeuralNet->trainning.iterations);
 
 	LOGINFOR("AverageCostLoss :%.6f", PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount);
 	LOGINFOR("L1_decay_loss   :%.6f", PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount);
@@ -2034,7 +2031,9 @@ void NeuralNetPrintTrainningInfor(TPNeuralNet PNeuralNet)
 
 void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 {
-	TPTensor weight, grads, sumPTensor1, sumPTensor2;
+	TPTensor weight, grads;
+	TPTensor accum_grads1;//累计历史梯度
+	TPTensor accum_grads2;//for Optm_Adadelta
 	TPResponse *pResponseResults = NULL;
 	TPResponse pResponse = NULL;
 	float32_t costLost = 0.00;
@@ -2046,33 +2045,37 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	float32_t bias1 = 0.00;
 	float32_t bias2 = 0.00;
 	float32_t dx = 0.00;
-	float32_t temp = 0.00;
-	sumPTensor1 = NULL;
-	sumPTensor2 = NULL;
+	//float32_t temp = 0.00;
+
 	float32_t l1_decay_loss = 0;
 	float32_t l2_decay_loss = 0;
-	time_t starTick = 0;
+	float32_t cost_loss = 0;
 
+	accum_grads1 = NULL;
+	accum_grads2 = NULL;
+	time_t starTick = 0;
 	/////////////////////////////////////////////////////////////////////////////////////
 	PNeuralNet->optimTime = 0;
 	starTick = GetTimestamp();
 	PNeuralNet->forward(PNeuralNet, PVolume);
-	PNeuralNet->getCostLoss(PNeuralNet);
+	PNeuralNet->getCostLoss(PNeuralNet,&cost_loss);
 	PNeuralNet->fwTime = GetTimestamp() - starTick;
 	starTick = GetTimestamp();
 	PNeuralNet->backward(PNeuralNet);
 	PNeuralNet->bwTime = GetTimestamp() - starTick;
 	PNeuralNet->trainning.batchCount++;
+	PNeuralNet->trainning.sum_cost_loss = PNeuralNet->trainning.sum_cost_loss + cost_loss;
 	/////////////////////////////////////////////////////////////////////////////////////
 	// 小批量阀值
 	if (PNeuralNet->trainningParam.batch_size <= 0)
 		PNeuralNet->trainningParam.batch_size = 15;
 	if (PNeuralNet->trainning.batchCount % PNeuralNet->trainningParam.batch_size != 0)
 		return;
-	PNeuralNet->trainning.iterations++;
+	
 	/////////////////////////////////////////////////////////////////////////////////////
-	////小批量梯度计算
+	////小批量梯度下降计算
 	starTick = GetTimestamp();
+	PNeuralNet->trainning.iterations++;
 	PNeuralNet->getWeightAndGrads(PNeuralNet);
 	if (PNeuralNet->trainning.underflow)
 	{
@@ -2134,11 +2137,11 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 			PNeuralNet->trainning.trainningGoing = false;
 			break;
 		}
-		sumPTensor1 = PNeuralNet->trainning.grads_sum1[i];
-		sumPTensor2 = PNeuralNet->trainning.grads_sum2[i];
+		accum_grads1 = PNeuralNet->trainning.grads_sum1[i];
+		accum_grads2 = PNeuralNet->trainning.grads_sum2[i];
 
-		l1_decay = PNeuralNet->trainningParam.l1_decay * pResponse->l1_decay_mul;
-		l2_decay = PNeuralNet->trainningParam.l2_decay * pResponse->l2_decay_mul;
+		l1_decay = PNeuralNet->trainningParam.l1_decay_rate * pResponse->l1_decay_rate;
+		l2_decay = PNeuralNet->trainningParam.l2_decay_rate * pResponse->l2_decay_rate;
 
 		for (uint16_t j = 0; j < weight->length; j++) // update weight
 		{
@@ -2154,33 +2157,33 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 			gradij = grads->buffer[j];
 			gradij = (l1_decay_grad + l2_decay_grad + gradij) / PNeuralNet->trainningParam.batch_size;
 
-			if (sumPTensor1 == NULL || sumPTensor2 == NULL)
+			if (accum_grads1 == NULL || accum_grads2 == NULL)
 			{
-				LOGERROR("sumPTensor1 or sumPTensor2=NULL");
+				LOGERROR("accum_grads1 or accum_grads2=NULL");
 				break;
 			}
 			switch (PNeuralNet->trainningParam.optimize_method)
 			{
 			case Optm_Adam:
-				sumPTensor1->buffer[j] = sumPTensor1->buffer[j] * PNeuralNet->trainningParam.beta1 + (1 - PNeuralNet->trainningParam.beta1) * gradij;
-				sumPTensor2->buffer[j] = sumPTensor1->buffer[j] * PNeuralNet->trainningParam.beta2 + (1 - PNeuralNet->trainningParam.beta2) * gradij * gradij;
+				accum_grads1->buffer[j] = accum_grads1->buffer[j] * PNeuralNet->trainningParam.beta1 + (1 - PNeuralNet->trainningParam.beta1) * gradij;
+				accum_grads2->buffer[j] = accum_grads1->buffer[j] * PNeuralNet->trainningParam.beta2 + (1 - PNeuralNet->trainningParam.beta2) * gradij * gradij;
 
-				bias1 = sumPTensor1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta1, PNeuralNet->trainning.batchCount));
-				bias2 = sumPTensor1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta2, PNeuralNet->trainning.batchCount));
+				bias1 = accum_grads1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta1, PNeuralNet->trainning.batchCount));
+				bias2 = accum_grads1->buffer[j] * (1 - pow(PNeuralNet->trainningParam.beta2, PNeuralNet->trainning.batchCount));
 				dx = -PNeuralNet->trainningParam.learning_rate * bias1 / (sqrt(bias2) + PNeuralNet->trainningParam.eps);
 
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
 			case Optm_Adagrad:
-				temp = sumPTensor1->buffer[j] + gradij * gradij;
-				sumPTensor1->buffer[j] = temp;
-				dx = -PNeuralNet->trainningParam.learning_rate / sqrt(sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps) * gradij;
+				//temp = accum_grads1->buffer[j] + gradij * gradij;
+				accum_grads1->buffer[j] = accum_grads1->buffer[j] + gradij * gradij;
+				dx = -PNeuralNet->trainningParam.learning_rate / sqrt(accum_grads1->buffer[j] + PNeuralNet->trainningParam.eps) * gradij;
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
 			case Optm_Adadelta:
-				sumPTensor1->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor1->buffer[j] + (1 - PNeuralNet->trainningParam.momentum) * gradij * gradij;
-				dx = -sqrt((sumPTensor2->buffer[j] + PNeuralNet->trainningParam.eps) / (sumPTensor1->buffer[j] + PNeuralNet->trainningParam.eps)) * gradij;
-				sumPTensor2->buffer[j] = PNeuralNet->trainningParam.momentum * sumPTensor2->buffer[j] + (1 - PNeuralNet->trainningParam.momentum) * dx * dx;
+				accum_grads1->buffer[j] = accum_grads1->buffer[j]* PNeuralNet->trainningParam.momentum + (1 - PNeuralNet->trainningParam.momentum) * gradij * gradij;
+				dx = -sqrt((accum_grads2->buffer[j] + PNeuralNet->trainningParam.eps) / (accum_grads1->buffer[j] + PNeuralNet->trainningParam.eps)) * gradij;
+				accum_grads2->buffer[j] = accum_grads2->buffer[j]* PNeuralNet->trainningParam.momentum + (1 - PNeuralNet->trainningParam.momentum) * dx * dx;
 				weight->buffer[j] = weight->buffer[j] + dx;
 				break;
 			default:
@@ -2189,10 +2192,6 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 			grads->buffer[j] = 0;
 		}
 	}
-
-	PNeuralNet->trainning.l1_decay_loss = PNeuralNet->trainning.l1_decay_loss + l1_decay_loss;
-	PNeuralNet->trainning.l2_decay_loss = PNeuralNet->trainning.l2_decay_loss + l2_decay_loss;
-
 	for (uint16_t i = 0; i < PNeuralNet->trainning.responseCount; i++)
 	{
 		pResponse = pResponseResults[i];
@@ -2202,17 +2201,22 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	PNeuralNet->trainning.responseCount = 0;
 	PNeuralNet->trainning.pResponseResults = NULL;
 	PNeuralNet->optimTime = GetTimestamp() - starTick;
+
+	PNeuralNet->trainning.l1_decay_loss = (PNeuralNet->trainning.l1_decay_loss + l1_decay_loss);
+	PNeuralNet->trainning.l2_decay_loss = (PNeuralNet->trainning.l2_decay_loss + l2_decay_loss);
+	//PNeuralNet->trainning.sum_cost_loss = PNeuralNet->trainning.sum_cost_loss + cost_loss;
 }
 
 void NeuralNetPredict(TPNeuralNet PNeuralNet, TPVolume PVolume)
 {
 	/////////////////////////////////////////////////////////////////////////////////////
+	float32_t cost_loss = 0;
 	PNeuralNet->forward(PNeuralNet, PVolume);
-	PNeuralNet->getCostLoss(PNeuralNet);
+	PNeuralNet->getCostLoss(PNeuralNet,&cost_loss);
 }
 /// @brief ///////////////////////////////////////////////////////////////////////
 /// @param PNeuralNet
-void NeuralNetSave(TPNeuralNet PNeuralNet)
+void NeuralNetSaveWeights(TPNeuralNet PNeuralNet)
 {
 	FILE *pFile = NULL;
 	char *name = NULL;
@@ -2230,7 +2234,7 @@ void NeuralNetSave(TPNeuralNet PNeuralNet)
 	}
 	if (pFile != NULL)
 	{
-		for (uint16_t layerIndex = PNeuralNet->depth - 1; layerIndex >= 0; layerIndex--)
+		for (uint16_t layerIndex = 0; layerIndex < PNeuralNet->depth; layerIndex++)
 		{
 			TPLayer pNetLayer = (PNeuralNet->layers[layerIndex]);
 			switch (pNetLayer->LayerType)
@@ -2266,12 +2270,13 @@ void NeuralNetSave(TPNeuralNet PNeuralNet)
 			}
 		}
 		fclose(pFile);
+		LOGINFOR("save weights to file %s", name);
 	}
 	// if (name != NULL)
 	//	free(name);
 }
 
-void NeuralNetLoad(TPNeuralNet PNeuralNet)
+void NeuralNetLoadWeights(TPNeuralNet PNeuralNet)
 {
 	FILE *pFile = NULL;
 	char *name = NULL;
@@ -2291,7 +2296,7 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 
 	if (pFile != NULL)
 	{
-		for (uint16_t layerIndex = PNeuralNet->depth - 1; layerIndex >= 0; layerIndex--)
+		for (uint16_t layerIndex = 0; layerIndex < PNeuralNet->depth; layerIndex++)
 		{
 			TPLayer pNetLayer = (PNeuralNet->layers[layerIndex]);
 			switch (pNetLayer->LayerType)
@@ -2302,22 +2307,22 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 			{
 				for (uint16_t out_d = 0; out_d < ((TPConvLayer)pNetLayer)->filters->filterNumber; out_d++)
 				{
-					TensorRead(pFile, ((TPConvLayer)pNetLayer)->filters->volumes[out_d]->weight);
+					TensorLoad(pFile, ((TPConvLayer)pNetLayer)->filters->volumes[out_d]->weight);
 				}
-				TensorRead(pFile, ((TPConvLayer)pNetLayer)->biases->weight);
+				TensorLoad(pFile, ((TPConvLayer)pNetLayer)->biases->weight);
 				break;
 			}
-			case Layer_Type_Pool:
-				break;
 			case Layer_Type_ReLu:
+				break;
+			case Layer_Type_Pool:
 				break;
 			case Layer_Type_FullyConnection:
 			{
 				for (uint16_t out_d = 0; out_d < ((TPFullyConnLayer)pNetLayer)->filters->filterNumber; out_d++)
 				{
-					TensorRead(pFile, ((TPFullyConnLayer)pNetLayer)->filters->volumes[out_d]->weight);
+					TensorLoad(pFile, ((TPFullyConnLayer)pNetLayer)->filters->volumes[out_d]->weight);
 				}
-				TensorRead(pFile, ((TPFullyConnLayer)pNetLayer)->biases->weight);
+				TensorLoad(pFile, ((TPFullyConnLayer)pNetLayer)->biases->weight);
 				break;
 			}
 			case Layer_Type_SoftMax:
@@ -2333,9 +2338,53 @@ void NeuralNetLoad(TPNeuralNet PNeuralNet)
 	//	free(name);
 }
 
-char *NeuralNetGetLayerName(TLayerType LayerType)
+void NeuralNetSaveNet(TPNeuralNet PNeuralNet)
 {
-	return CNNTypeName[LayerType];
+	FILE* pFile = NULL;
+	char* name = NULL;
+	if (PNeuralNet == NULL)
+		return;
+	if (PNeuralNet->name != NULL)
+	{
+		name = (char*)malloc(strlen(PNeuralNet->name) + strlen(NEURALNET_CNN_FILE_NAME));
+		sprintf(name, "%s%s", PNeuralNet->name, NEURALNET_CNN_FILE_NAME);
+		pFile = fopen(name, "wb");
+	}
+	else
+	{
+		pFile = fopen(NEURALNET_CNN_FILE_NAME, "wb");
+	}
+	if (pFile != NULL)
+	{
+		for (uint16_t layerIndex = 0; layerIndex < PNeuralNet->depth; layerIndex++)
+		{
+			TPLayer pNetLayer = (PNeuralNet->layers[layerIndex]);
+			switch (pNetLayer->LayerType)
+			{
+			case Layer_Type_Input:
+				break;
+			case Layer_Type_Convolution:
+				break;
+			case Layer_Type_ReLu:
+				break;
+			case Layer_Type_Pool:
+				break;	
+			case Layer_Type_FullyConnection:
+				break;
+			case Layer_Type_SoftMax:
+				break;
+			default:
+				break;
+			}
+		}
+		fclose(pFile);
+		LOGINFOR("save weights to file %s", name);
+	}
+}
+
+void NeuralNetLoadNet(TPNeuralNet PNeuralNet)
+{
+
 }
 
 TPNeuralNet NeuralNetCNNCreate(char *name)
@@ -2358,8 +2407,8 @@ TPNeuralNet NeuralNetCNNCreate(char *name)
 	PNeuralNet->getMaxPrediction = NeuralNetGetMaxPrediction;
 	PNeuralNet->train = NeuralNetTrain;
 	PNeuralNet->predict = NeuralNetPredict;
-	PNeuralNet->save = NeuralNetSave;
-	PNeuralNet->load = NeuralNetLoad;
+	PNeuralNet->saveWeights = NeuralNetSaveWeights;
+	PNeuralNet->loadWeights = NeuralNetLoadWeights;
 	PNeuralNet->printGradients = NeuralNetPrintGradients;
 	PNeuralNet->printWeights = NeuralNetPrintWeights;
 	PNeuralNet->printTrainningInfor = NeuralNetPrintTrainningInfor;
@@ -2368,6 +2417,10 @@ TPNeuralNet NeuralNetCNNCreate(char *name)
 	PNeuralNet->getName = NeuralNetGetLayerName;
 }
 
+char* NeuralNetGetLayerName(TLayerType LayerType)
+{
+	return CNNTypeName[LayerType];
+}
 int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption)
 {
 	TPLayer pNetLayer = NULL;
@@ -2380,7 +2433,10 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption)
 		// LayerOption.in_h = LayerOption.in_h;
 		// LayerOption.in_depth = LayerOption.in_depth;
 		if (PNeuralNet->depth > 0)
+		{
+			LOGINFOR("input layer need to add first");
 			return LayerOption.LayerType + NEURALNET_ERROR_BASE;
+		}
 		PNeuralNet->init(PNeuralNet, &LayerOption);
 		break;
 	case Layer_Type_Convolution:
@@ -2399,8 +2455,8 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption)
 		LayerOption.stride = LayerOption.stride;
 		LayerOption.padding = LayerOption.padding;
 		LayerOption.bias = LayerOption.bias;
-		LayerOption.l1_decay_mul = LayerOption.l1_decay_mul;
-		LayerOption.l2_decay_mul = LayerOption.l2_decay_mul;
+		LayerOption.l1_decay_rate = LayerOption.l1_decay_rate;
+		LayerOption.l2_decay_rate = LayerOption.l2_decay_rate;
 		PNeuralNet->init(PNeuralNet, &LayerOption);
 		return LayerOption.LayerType;
 		break;
@@ -2446,8 +2502,8 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption)
 		LayerOption.out_h = 1;
 		LayerOption.out_w = 1;
 		LayerOption.bias = LayerOption.bias;
-		LayerOption.l1_decay_mul = LayerOption.l1_decay_mul;
-		LayerOption.l2_decay_mul = LayerOption.l2_decay_mul;
+		LayerOption.l1_decay_rate = LayerOption.l1_decay_rate;
+		LayerOption.l2_decay_rate = LayerOption.l2_decay_rate;
 		PNeuralNet->init(PNeuralNet, &LayerOption);
 		return LayerOption.LayerType;
 		break;

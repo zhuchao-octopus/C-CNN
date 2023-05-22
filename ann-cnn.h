@@ -32,6 +32,7 @@
 #define PRINTFLAG_FORMAT "%9.6f"
 
 #define NEURALNET_CNN_WEIGHT_FILE_NAME "_cnn.w"
+#define NEURALNET_CNN_FILE_NAME "_cnn.csv"
 #define NEURALNET_ERROR_BASE 10001
 
 #define PLATFORM_WINDOWS
@@ -150,8 +151,8 @@ typedef struct ANN_CNN_Response
 {
 	TPTensor filterWeight;
 	TPTensor filterGrads;
-	float32_t l2_decay_mul;
-	float32_t l1_decay_mul;
+	float32_t l2_decay_rate;
+	float32_t l1_decay_rate;
 	void (*fillZero)(TPTensor PTensor);
 	void (*free)(TPTensor PTensor);
 } TResponse, *TPResponse;
@@ -207,8 +208,8 @@ typedef struct ANN_CNN_LayerOption
 	uint16_t padding;
 	uint16_t neurons;
 	uint16_t group_size;
-	float32_t l1_decay_mul;
-	float32_t l2_decay_mul;
+	float32_t l1_decay_rate;
+	float32_t l2_decay_rate;
 	float32_t drop_prob;
 	float32_t bias;
 } TLayerOption, *TPLayerOption;
@@ -234,7 +235,6 @@ typedef struct ANN_CNN_InputLayer
 	void (*forward)(struct ANN_CNN_InputLayer *PLayer, TVolume *Volume);
 	void (*backward)(struct ANN_CNN_InputLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_InputLayer *PLayer, int Y);
-	// float32_t (*backwardOutput)(struct ANN_CNN_InputLayer *PLayer, TTensor Tensor);
 } TInputLayer, *TPInputLayer;
 
 typedef struct ANN_CNN_ConvolutionLayer
@@ -243,8 +243,8 @@ typedef struct ANN_CNN_ConvolutionLayer
 	TPFilters filters;
 	uint16_t stride;
 	uint16_t padding;
-	float32_t l1_decay_mul;
-	float32_t l2_decay_mul;
+	float32_t l1_decay_rate;
+	float32_t l2_decay_rate;
 	float32_t bias;
 	TPVolume biases;
 	void (*init)(struct ANN_CNN_ConvolutionLayer *PLayer, TPLayerOption PLayerOption);
@@ -253,8 +253,6 @@ typedef struct ANN_CNN_ConvolutionLayer
 	void (*backward)(struct ANN_CNN_ConvolutionLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_ConvolutionLayer *PLayer, int Y);
 	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_ConvolutionLayer *PConvLayer);
-	// float32_t (*backwardOutput)(struct ANN_CNN_ConvolutionLayer *PLayer, TTensor Tensor);
-
 } TConvLayer, *TPConvLayer;
 
 typedef struct ANN_CNN_PoolLayer
@@ -262,19 +260,14 @@ typedef struct ANN_CNN_PoolLayer
 	TLayer layer;
 	uint16_t stride;
 	uint16_t padding;
-	// float32_t l1_decay_mul;
-	// float32_t l2_decay_mul;
-	// float32_t bias;
 	TPVolume filter;
 	TPVolume switchxy;
-	// TPVolume switchy;
 	void (*init)(struct ANN_CNN_PoolLayer *PLayer, TPLayerOption PLayerOption);
 	void (*free)(struct ANN_CNN_PoolLayer *PLayer);
 	void (*forward)(struct ANN_CNN_PoolLayer *PLayer);
 	void (*backward)(struct ANN_CNN_PoolLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_PoolLayer *PLayer, int Y);
 	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_PoolLayer *PPoolLayer);
-	// float32_t (*backwardOutput)(struct ANN_CNN_PoolLayer *PLayer, TTensor Tensor);
 } TPoolLayer, *TPPoolLayer;
 
 typedef struct ANN_CNN_ReluLayer
@@ -286,7 +279,6 @@ typedef struct ANN_CNN_ReluLayer
 	void (*forward)(struct ANN_CNN_ReluLayer *PLayer);
 	void (*backward)(struct ANN_CNN_ReluLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_ReluLayer *PLayer, int Y);
-	// float32_t (*backwardOutput)(struct ANN_CNN_ReluLayer *PLayer, TTensor Tensor);
 	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_ReluLayer *PReluLayer);
 } TReluLayer, *TPReluLayer;
 
@@ -295,15 +287,14 @@ typedef struct ANN_CNN_FullyConnectionLayer
 	TLayer layer;
 	TPFilters filters;
 	TPVolume biases;
-	float32_t l1_decay_mul;
-	float32_t l2_decay_mul;
+	float32_t l1_decay_rate;
+	float32_t l2_decay_rate;
 	float32_t bias;
 	void (*init)(struct ANN_CNN_FullyConnLayer *PLayer, TPLayerOption PLayerOption);
 	void (*free)(struct ANN_CNN_FullyConnLayer *PLayer);
 	void (*forward)(struct ANN_CNN_FullyConnLayer *PLayer);
 	void (*backward)(struct ANN_CNN_FullyConnLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_FullyConnLayer *PLayer, int Y);
-	// float32_t (*backwardOutput)(struct ANN_CNN_FullyConnLayer *PLayer, TTensor Tensor);
 	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_FullyConnLayer *PFullyConnLayer);
 } TFullyConnLayer, *TPFullyConnLayer;
 
@@ -317,7 +308,6 @@ typedef struct ANN_CNN_SoftmaxLayer
 	void (*forward)(struct ANN_CNN_SoftmaxLayer *PLayer);
 	void (*backward)(struct ANN_CNN_SoftmaxLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_SoftmaxLayer *PLayer);
-	// float32_t (*backwardOutput)(struct ANN_CNN_SoftmaxLayer *PLayer, TTensor Tensor);
 	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_SoftmaxLayer *PSoftmaxLayer);
 } TSoftmaxLayer, *TPSoftmaxLayer;
 
@@ -326,8 +316,8 @@ typedef struct ANN_CNN_LearningParameter
 	uint16_t optimize_method;
 	uint16_t batch_size;
 	float32_t learning_rate;
-	float32_t l1_decay;
-	float32_t l2_decay;
+	float32_t l1_decay_rate;
+	float32_t l2_decay_rate;
 	float32_t eps;
 	float32_t beta1; // for adam
 	float32_t beta2; // for adam
@@ -339,7 +329,7 @@ typedef struct ANN_CNN_Learning
 {
 	bool_t trainningGoing;
 	uint16_t data_type;
-	float32_t cost_loss;
+	//float32_t cost_loss;
 	float32_t sum_cost_loss;
 	float32_t l1_decay_loss;
 	float32_t l2_decay_loss;
@@ -385,21 +375,22 @@ typedef struct ANN_CNN_NeuralNet
 	void (*free)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*forward)(struct ANN_CNN_NeuralNet *PNeuralNet, TPVolume PVolume);
 	void (*backward)(struct ANN_CNN_NeuralNet *PNeuralNet);
+	void (*getCostLoss)(struct ANN_CNN_NeuralNet* PNeuralNet, float32_t *CostLoss);
 	void (*getWeightAndGrads)(struct ANN_CNN_NeuralNet *PNeuralNet);
-	void (*getCostLoss)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*getPredictions)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*getMaxPrediction)(struct ANN_CNN_NeuralNet *PNeuralNet, TPPrediction PPrediction);
 	void (*train)(struct ANN_CNN_NeuralNet *PNeuralNet, TPVolume PVolume);
 	void (*predict)(struct ANN_CNN_NeuralNet* PNeuralNet, TPVolume PVolume);
 	void (*printWeights)(struct ANN_CNN_NeuralNet *PNeuralNet, uint16_t LayerIndex, uint8_t InOut);
 	void (*printTensor)(char* Name, TPTensor PTensor);
-	// void (*printFilters)(struct ANN_CNN_NeuralNet *PNeuralNet,uint16_t LayerIndex,uint8_t InOut);
 	void (*printGradients)(struct ANN_CNN_NeuralNet *PNeuralNet, uint16_t LayerIndex, uint8_t InOut);
 	void (*printTrainningInfor)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*printNetLayersInfor)(struct ANN_CNN_NeuralNet* PNeuralNet);
 	
-	void (*save)(struct ANN_CNN_NeuralNet *PNeuralNet);
-	void (*load)(struct ANN_CNN_NeuralNet *PNeuralNet);
+	void (*saveWeights)(struct ANN_CNN_NeuralNet *PNeuralNet);
+	void (*loadWeights)(struct ANN_CNN_NeuralNet *PNeuralNet);
+	void (*saveNet)(struct ANN_CNN_NeuralNet* PNeuralNet);
+	void (*loadNet)(struct ANN_CNN_NeuralNet* PNeuralNet);
 	char *(*getName)(TLayerType LayerType);
 } TNeuralNet, *TPNeuralNet;
 
@@ -432,8 +423,8 @@ DLLEXPORT void NeuralNetBackward(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetComputeCostLoss(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetUpdatePrediction(TPNeuralNet PNeuralNet);
-DLLEXPORT void NeuralNetSave(TPNeuralNet PNeuralNet);
-DLLEXPORT void NeuralNetLoad(TPNeuralNet PNeuralNet);
+DLLEXPORT void NeuralNetSaveWeights(TPNeuralNet PNeuralNet);
+DLLEXPORT void NeuralNetLoadWeights(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetGetMaxPrediction(TPNeuralNet PNeuralNet, TPPrediction PPrediction);
 DLLEXPORT void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume);
 DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);

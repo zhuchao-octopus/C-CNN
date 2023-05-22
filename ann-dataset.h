@@ -9,18 +9,16 @@
 #include "ann-cnn.h"
 
 //cifar-10 /cifar-100
-#define CIFAR_IMAGE_NUM_TOTAL 60000
+#define CIFAR_TRAINNING_IMAGE_COUNT 50000
 #define CIFAR_TESTING_IMAGE_COUNT 10000
-#define CIFAR_TRAINNING_IMAGE_SAVINT_COUNT 5000
+#define CIFAR_TRAINNING_IMAGE_SAVINT_COUNT 1000
+
+#define CIFAR10_TRAINNING_IMAGE_BATCH_COUNT 10000
 
 #define CIFAR10_IMAGE_LABEL_NUM 20
 #define CIFAR10_IMAGE_WIDTH 32
 #define CIFAR10_IMAGE_HEIGHT 32
 #define CIFAR10_IMAGE_SIZE (3072 + 1) // 32X32X3+1
-
-#define CIFAR10_TRAINNING_IMAGE_BATCH_COUNT 10000
-#define CIFAR10_TRAINNING_IMAGE_COUNT CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 5
-
 #define CIFAR100_IMAGE_SIZE (3072 + 2) // 32X32X3+2
 
 typedef enum DataSetType
@@ -49,5 +47,6 @@ uint32_t Cifar100ReadImage(FILE* PFile, uint8_t* Buffer, uint32_t ImageIndex);
 uint32_t ReadFileToBuffer(const char* FileName, uint8_t* Buffer, uint32_t ReadSize, uint32_t OffSet);
 uint32_t ReadFileToBuffer2(FILE *PFile, uint8_t *Buffer, uint32_t ReadSize, uint32_t OffSet);
 
-
+void CloseTestingDataset();
+void CloseTrainningDataset();
 #endif /* _INC_ANN_CNN_H_ */

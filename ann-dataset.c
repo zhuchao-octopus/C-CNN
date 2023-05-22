@@ -11,7 +11,6 @@
 #define Cifar10FilePathName3 "../cifar-10-batches-bin\\data_batch_3.bin"
 #define Cifar10FilePathName4 "../cifar-10-batches-bin\\data_batch_4.bin"
 #define Cifar10FilePathName5 "../cifar-10-batches-bin\\data_batch_5.bin"
-
 #define Cifar10FilePathName6 "../cifar-10-batches-bin\\test_batch.bin"    
 
 #define Cifar100FilePathName_test "../cifar-100-binary\\test.bin"    
@@ -23,16 +22,18 @@ char DataSetName[][10] = {"cifar-10", "cifar-10", ""};
 FILE *PCifarFile_Trainning = NULL;
 FILE* PCifarFile_Testing = NULL;
 
-void CloseDataset()
+void CloseTrainningDataset()
 {
     if (PCifarFile_Trainning != NULL)
         fclose(PCifarFile_Trainning);
+    PCifarFile_Trainning = NULL;
+}
+void CloseTestingDataset()
+{
     if (PCifarFile_Testing != NULL)
         fclose(PCifarFile_Testing);
-    PCifarFile_Trainning = NULL;
     PCifarFile_Testing = NULL;
 }
-
 char *GetDataSetName(uint16_t DsType)
 {
     return DataSetName[DsType];
@@ -49,10 +50,12 @@ TPPicture Dataset_GetTestingPic(uint32_t TestingIndex, uint16_t DataSetType)
         if (DataSetType == Cifar10)
         {
             PCifarFile_Testing = fopen(Cifar10FilePathName6, "rb");
+            LOGINFOR("load testing set from %s", Cifar10FilePathName6);
         }
         else  if (DataSetType == Cifar100)
         {
             PCifarFile_Testing = fopen(Cifar100FilePathName_test, "rb");
+            LOGINFOR("load testing set from %s", Cifar100FilePathName_test);
         }
     }
     if (PCifarFile_Testing != NULL)
@@ -69,38 +72,45 @@ TPPicture Dataset_GetTrainningPic(uint32_t TrainningIndex, uint16_t DataSetType)
 {
     uint32_t image_index = TrainningIndex;
     if (DataSetType == Cifar10)
-    {
-            image_index = TrainningIndex % CIFAR10_TRAINNING_IMAGE_BATCH_COUNT;
-            if (PCifarFile_Trainning == NULL)
+    {       
+            if (PCifarFile_Trainning == NULL || TrainningIndex >= CIFAR_TRAINNING_IMAGE_COUNT)
             {
+                CloseTrainningDataset();
                 PCifarFile_Trainning = fopen(Cifar10FilePathName1, "rb");
+                LOGINFOR("load trainning set from %s", Cifar10FilePathName1);
             }
             else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT)
             {
-                CloseDataset();
-                    PCifarFile_Trainning = fopen(Cifar10FilePathName2, "rb");
+                CloseTrainningDataset();
+                PCifarFile_Trainning = fopen(Cifar10FilePathName2, "rb");
+                LOGINFOR("load trainning set from %s", Cifar10FilePathName2);
             }
             else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 2)
             {
-                CloseDataset();
+                CloseTrainningDataset();
                 PCifarFile_Trainning = fopen(Cifar10FilePathName3, "rb");
+                LOGINFOR("load trainning set from %s", Cifar10FilePathName3);
             }
             else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 3)
             {
-                CloseDataset();
+                CloseTrainningDataset();
                 PCifarFile_Trainning = fopen(Cifar10FilePathName4, "rb");
+                LOGINFOR("load trainning set from %s", Cifar10FilePathName4);
             }
             else if (TrainningIndex == CIFAR10_TRAINNING_IMAGE_BATCH_COUNT * 4)
             {
-                CloseDataset();
+                CloseTrainningDataset();
                 PCifarFile_Trainning = fopen(Cifar10FilePathName5, "rb");
+                LOGINFOR("load trainning set from %s", Cifar10FilePathName5);
             }
+            image_index = TrainningIndex % CIFAR10_TRAINNING_IMAGE_BATCH_COUNT;
     }
     else if (DataSetType == Cifar100)
     {
         if (PCifarFile_Trainning == NULL)
         {
             PCifarFile_Trainning = fopen(Cifar100FilePathName_train, "rb");
+            LOGINFOR("load trainning set from %s", Cifar100FilePathName_train);
         }
     }
     if (PCifarFile_Trainning != NULL)
@@ -136,9 +146,9 @@ TPPicture Dataset_GetPic(FILE *PFile, uint32_t ImageIndex, uint16_t DataSetType)
                 uint8_t r = CifarBuffer[y * CIFAR10_IMAGE_WIDTH + x + 1];
                 uint8_t g = CifarBuffer[y * CIFAR10_IMAGE_WIDTH + CIFAR10_IMAGE_WIDTH * CIFAR10_IMAGE_HEIGHT + x + 1];
                 uint8_t b = CifarBuffer[y * CIFAR10_IMAGE_WIDTH + CIFAR10_IMAGE_WIDTH * CIFAR10_IMAGE_HEIGHT * 2 + x + 1];
-                float32_t fr = r / 255.0;
-                float32_t fg = g / 255.0;
-                float32_t fb = b / 255.0;
+                float32_t fr = r / 255.0 - 0.5;//降低网络的复杂度
+                float32_t fg = g / 255.0 - 0.5;
+                float32_t fb = b / 255.0 - 0.5;
                 pPic->volume->setValue(pPic->volume, x, y, 0, fr);
                 pPic->volume->setValue(pPic->volume, x, y, 1, fg);
                 pPic->volume->setValue(pPic->volume, x, y, 2, fb);
