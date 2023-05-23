@@ -456,8 +456,8 @@ void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN)
 	PNeuralNetCNN->trainning.batchCount = 0;
 	PNeuralNetCNN->trainning.iterations = 0;
 	PNeuralNetCNN->trainning.sum_cost_loss = 0;
-	PNeuralNetCNN->trainning.l1_decay_loss = 0;
-	PNeuralNetCNN->trainning.l2_decay_loss = 0;
+	PNeuralNetCNN->trainning.sum_l1_decay_loss = 0;
+	PNeuralNetCNN->trainning.sum_l2_decay_loss = 0;
 	PNeuralNetCNN->trainning.pResponseResults = NULL;
 	PNeuralNetCNN->trainning.responseCount = 0;
 	PNeuralNetCNN->trainning.pPredictions = NULL;
@@ -689,8 +689,8 @@ void PrintTrainningInfor()
 		LOGINFO("Iterations      :%08d  ", PNeuralNetCNN_Cifar10->trainning.iterations);
 
 		LOGINFO("AverageCostLoss :%.6f", PNeuralNetCNN_Cifar10->trainning.sum_cost_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("L1_decay_loss   :%.6f", PNeuralNetCNN_Cifar10->trainning.l1_decay_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("L2_decay_loss   :%.6f", PNeuralNetCNN_Cifar10->trainning.l2_decay_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
+		LOGINFO("L1_decay_loss   :%.6f", PNeuralNetCNN_Cifar10->trainning.sum_l1_decay_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
+		LOGINFO("L2_decay_loss   :%.6f", PNeuralNetCNN_Cifar10->trainning.sum_l2_decay_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
 		LOGINFO("TrainingAccuracy:%.6f", PNeuralNetCNN_Cifar10->trainning.trainingAccuracy / PNeuralNetCNN_Cifar10->trainning.sampleCount);
 		LOGINFO("TestingAccuracy :%.6f", PNeuralNetCNN_Cifar10->trainning.testingAccuracy / PNeuralNetCNN_Cifar10->trainning.sampleCount);
 
@@ -718,8 +718,8 @@ void PrintTrainningInfor()
 		LOGINFO("Iterations      :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.iterations);
 
 		LOGINFO("AverageCostLoss :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.sum_cost_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("L1_decay_loss   :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.l1_decay_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("L2_decay_loss   :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.l2_decay_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
+		LOGINFO("L1_decay_loss   :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.sum_l1_decay_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
+		LOGINFO("L2_decay_loss   :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.sum_l2_decay_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
 		LOGINFO("TrainingAccuracy:\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.trainingAccuracy / PNeuralNetCNN_Cifar100->trainning.sampleCount);
 		LOGINFO("TestingAccuracy :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.testingAccuracy / PNeuralNetCNN_Cifar100->trainning.sampleCount);
 
@@ -747,7 +747,7 @@ void PrintTrainningInfor()
 			 PNeuralNet->trainning.iterations);
 
 	LOGINFOR("AvgCostLoss:%.6f L1_decay_loss:%.6f L2_decay_loss:%.6f TrainingAccuracy:%.6f TestingAccuracy:%.6f",
-			 PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount,
+			 PNeuralNet->trainning.cost_loss_sum / PNeuralNet->trainning.sampleCount,
 			 PNeuralNet->trainning.l1_decay_loss / PNeuralNet->trainning.sampleCount,
 			 PNeuralNet->trainning.l2_decay_loss / PNeuralNet->trainning.sampleCount,
 			 PNeuralNet->trainning.trainingAccuracy / PNeuralNet->trainning.sampleCount,

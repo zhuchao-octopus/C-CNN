@@ -252,7 +252,7 @@ typedef struct ANN_CNN_ConvolutionLayer
 	void (*forward)(struct ANN_CNN_ConvolutionLayer *PLayer);
 	void (*backward)(struct ANN_CNN_ConvolutionLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_ConvolutionLayer *PLayer, int Y);
-	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_ConvolutionLayer *PConvLayer);
+	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_ConvolutionLayer *PConvLayer);
 } TConvLayer, *TPConvLayer;
 
 typedef struct ANN_CNN_PoolLayer
@@ -267,7 +267,7 @@ typedef struct ANN_CNN_PoolLayer
 	void (*forward)(struct ANN_CNN_PoolLayer *PLayer);
 	void (*backward)(struct ANN_CNN_PoolLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_PoolLayer *PLayer, int Y);
-	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_PoolLayer *PPoolLayer);
+	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_PoolLayer *PPoolLayer);
 } TPoolLayer, *TPPoolLayer;
 
 typedef struct ANN_CNN_ReluLayer
@@ -279,7 +279,7 @@ typedef struct ANN_CNN_ReluLayer
 	void (*forward)(struct ANN_CNN_ReluLayer *PLayer);
 	void (*backward)(struct ANN_CNN_ReluLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_ReluLayer *PLayer, int Y);
-	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_ReluLayer *PReluLayer);
+	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_ReluLayer *PReluLayer);
 } TReluLayer, *TPReluLayer;
 
 typedef struct ANN_CNN_FullyConnectionLayer
@@ -295,7 +295,7 @@ typedef struct ANN_CNN_FullyConnectionLayer
 	void (*forward)(struct ANN_CNN_FullyConnLayer *PLayer);
 	void (*backward)(struct ANN_CNN_FullyConnLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_FullyConnLayer *PLayer, int Y);
-	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_FullyConnLayer *PFullyConnLayer);
+	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_FullyConnLayer *PFullyConnLayer);
 } TFullyConnLayer, *TPFullyConnLayer;
 
 typedef struct ANN_CNN_SoftmaxLayer
@@ -308,7 +308,7 @@ typedef struct ANN_CNN_SoftmaxLayer
 	void (*forward)(struct ANN_CNN_SoftmaxLayer *PLayer);
 	void (*backward)(struct ANN_CNN_SoftmaxLayer *PLayer);
 	float32_t (*computeLoss)(struct ANN_CNN_SoftmaxLayer *PLayer);
-	TPResponse *(*getWeightAndGrads)(struct ANN_CNN_SoftmaxLayer *PSoftmaxLayer);
+	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_SoftmaxLayer *PSoftmaxLayer);
 } TSoftmaxLayer, *TPSoftmaxLayer;
 
 typedef struct ANN_CNN_LearningParameter
@@ -329,10 +329,9 @@ typedef struct ANN_CNN_Learning
 {
 	bool_t trainningGoing;
 	uint16_t data_type;
-	//float32_t cost_loss;
 	float32_t sum_cost_loss;
-	float32_t l1_decay_loss;
-	float32_t l2_decay_loss;
+	float32_t sum_l1_decay_loss;
+	float32_t sum_l2_decay_loss;
 	float32_t trainingAccuracy;
 	float32_t testingAccuracy;
 
@@ -376,7 +375,7 @@ typedef struct ANN_CNN_NeuralNet
 	void (*forward)(struct ANN_CNN_NeuralNet *PNeuralNet, TPVolume PVolume);
 	void (*backward)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*getCostLoss)(struct ANN_CNN_NeuralNet* PNeuralNet, float32_t *CostLoss);
-	void (*getWeightAndGrads)(struct ANN_CNN_NeuralNet *PNeuralNet);
+	void (*getWeightsAndGrads)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*getPredictions)(struct ANN_CNN_NeuralNet *PNeuralNet);
 	void (*getMaxPrediction)(struct ANN_CNN_NeuralNet *PNeuralNet, TPPrediction PPrediction);
 	void (*train)(struct ANN_CNN_NeuralNet *PNeuralNet, TPVolume PVolume);
