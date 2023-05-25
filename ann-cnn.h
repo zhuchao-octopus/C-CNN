@@ -141,6 +141,12 @@ typedef void (*CnnFunction)(int x, int y, int depth, float32_t v);
 typedef void (*VolumeFunction)(int x, int y, int depth, float32_t v);
 typedef double (*VolumeFunction_get)(int x, int y, int depth, float32_t v);
 
+typedef struct ANN_CNN_MaxMin
+{
+	float32_t max;
+	float32_t min;
+} TMaxMin, *TPMaxMin;
+
 typedef struct ANN_CNN_Tensor
 {
 	float32_t *buffer;
@@ -178,6 +184,7 @@ typedef struct ANN_CNN_Volume
 	float32_t (*getGradValue)(struct ANN_CNN_Volume *PVolume, uint16_t X, uint16_t Y, uint16_t Depth);
 	void (*fillZero)(TPTensor PTensor);
 	void (*fillGauss)(TPTensor PTensor);
+	void (*flip)(struct ANN_CNN_Volume* PVolume);
 	void (*print)(struct ANN_CNN_Volume *PVolume, uint8_t wg);
 	void (*free)(TPTensor PTensor);
 } TVolume, *TPVolume;
@@ -282,7 +289,7 @@ typedef struct ANN_CNN_ReluLayer
 	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_ReluLayer *PReluLayer);
 } TReluLayer, *TPReluLayer;
 
-typedef struct ANN_CNN_FullyConnectionLayer
+typedef struct ANN_CNN_FullyConnectedLayer //FullyConnectedLayer
 {
 	TLayer layer;
 	TPFilters filters;
@@ -290,12 +297,12 @@ typedef struct ANN_CNN_FullyConnectionLayer
 	float32_t l1_decay_rate;
 	float32_t l2_decay_rate;
 	float32_t bias;
-	void (*init)(struct ANN_CNN_FullyConnLayer *PLayer, TPLayerOption PLayerOption);
-	void (*free)(struct ANN_CNN_FullyConnLayer *PLayer);
-	void (*forward)(struct ANN_CNN_FullyConnLayer *PLayer);
-	void (*backward)(struct ANN_CNN_FullyConnLayer *PLayer);
-	float32_t (*computeLoss)(struct ANN_CNN_FullyConnLayer *PLayer, int Y);
-	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_FullyConnLayer *PFullyConnLayer);
+	void (*init)(struct ANN_CNN_FullyConnectedLayer*PLayer, TPLayerOption PLayerOption);
+	void (*free)(struct ANN_CNN_FullyConnectedLayer*PLayer);
+	void (*forward)(struct ANN_CNN_FullyConnectedLayer*PLayer);
+	void (*backward)(struct ANN_CNN_FullyConnectedLayer*PLayer);
+	float32_t (*computeLoss)(struct ANN_CNN_FullyConnectedLayer*PLayer, int Y);
+	TPResponse *(*getWeightsAndGrads)(struct ANN_CNN_FullyConnectedLayer*PFullyConnLayer);
 } TFullyConnLayer, *TPFullyConnLayer;
 
 typedef struct ANN_CNN_SoftmaxLayer
@@ -394,9 +401,11 @@ typedef struct ANN_CNN_NeuralNet
 } TNeuralNet, *TPNeuralNet;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
+double GenerateRandomNumber();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void TensorFillZero(TPTensor PTensor);
 void TensorFillGauss(TPTensor PTensor);
+TPMaxMin TensorMaxMin(TPTensor PTensor);
 void TensorSave(FILE* pFile, TPTensor PTensor);
 TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth);
 void VolumeInit(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias);
@@ -407,6 +416,7 @@ float32_t VolumeGetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Dept
 void VolumeSetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
 void VolumeAddGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
 float32_t VolumeGetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth);
+void  VolumeFlip(TPVolume PVolume);
 void VolumePrint(TPVolume PVolume, uint8_t wg);
 TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber);
 void FilterVolumesFree(TPFilters PFilters);
@@ -429,8 +439,7 @@ DLLEXPORT void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume);
 DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 /// @brief ////////////////////////////////////////////////////////////////////////////////////////////////
 /// @return
-DLLEXPORT void NeuralNetInit_Cifar10(void);
-DLLEXPORT void NeuralNetInit_Cifar100(void);
+DLLEXPORT void NeuralNetInit_Cifar10_11(void);
 
 void TestDSPFloatProcess(float32_t f1, float32_t f2);
 time_t GetTimestamp(void);

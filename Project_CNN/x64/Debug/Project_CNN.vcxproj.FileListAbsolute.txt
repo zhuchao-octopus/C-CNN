@@ -1,1 +1,1 @@
-F:\CProjects\CNN\Project_CNN\x64\Debug\Project_CNN.exe
+F:\CProjects\CNN\Project_CNN\x64\Debug\Project_C-CNN.exe

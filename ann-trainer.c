@@ -23,10 +23,13 @@ void NeuralNetStartPrediction(TPNeuralNet PNeuralNetCNN);
 void PrintTrainningInfor(void);
 /////////////////////////////////////////////////////////////////////////////////////////////
 // 定义两个学习网络
-TPNeuralNet PNeuralNetCNN_Cifar10 = NULL;
-TPNeuralNet PNeuralNetCNN_Cifar100 = NULL;
 #define NET_CIFAR10_NAME "Cifar10"
 #define NET_CIFAR100_NAME "Cifar100"
+#define NET_CIFAR_16_NAME "Cifar100"
+TPNeuralNet PNeuralNetCNN_Cifar10 = NULL;
+TPNeuralNet PNeuralNetCNN_Cifar100 = NULL;
+
+
 // TLayerOption InputOption = {Layer_Type_Input, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // TLayerOption ConvOption = {Layer_Type_Convolution, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // TLayerOption PoolOption = {Layer_Type_Pool, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -37,7 +40,7 @@ TLayerOption LayerOption = {Layer_Type_None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 /////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief ///////////////////////////////////////////////////////
 /// @param
-void NeuralNetInit_Cifar10(void)
+void NeuralNetInit_Cifar10_11(void)
 {
 	TPLayer pNetLayer;
 	if (PNeuralNetCNN_Cifar10 != NULL)
@@ -378,47 +381,242 @@ void NeuralNetInit_Cifar100(void)
 	PNeuralNetCNN_Cifar100->init(PNeuralNetCNN_Cifar100, &LayerOption);
 	//////////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_Cifar100->layers[PNeuralNetCNN_Cifar100->depth - 1];
-	// LOG("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d\n", PNeuralNetCNN->depth - 1, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
-	//	pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_FullyConnection;
 	LayerOption.in_w = pNetLayer->out_w;
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
-
-	// LayerOption.filter_w = 1;
-	// LayerOption.filter_h = 1;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
 	LayerOption.filter_number = 100;
-
 	LayerOption.out_depth = LayerOption.filter_number;
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
-
 	LayerOption.bias = 0;
 	LayerOption.l1_decay_rate = 1;
 	LayerOption.l2_decay_rate = 1;
 	PNeuralNetCNN_Cifar100->init(PNeuralNetCNN_Cifar100, &LayerOption);
 
 	pNetLayer = PNeuralNetCNN_Cifar100->layers[PNeuralNetCNN_Cifar100->depth - 1];
-	// LOG("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d\n", PNeuralNetCNN->depth - 1, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
-	//	pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_SoftMax;
 	LayerOption.in_w = pNetLayer->out_w;
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
-
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
 	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h; // 10;
-
 	PNeuralNetCNN_Cifar100->init(PNeuralNetCNN_Cifar100, &LayerOption);
-	pNetLayer = PNeuralNetCNN_Cifar100->layers[PNeuralNetCNN_Cifar100->depth - 1];
-	// LOG("NeuralNetCNN[%02d,%02d]:in_w=%2d, in_h=%2d, in_depth=%2d, out_w=%2d, out_h=%2d, out_depth=%2d\n", PNeuralNetCNN->depth - 1, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
-	// pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth);
-	// LOG("\n////////////////////////////////////////////////////////////////////////////////////\n");
+
 	PNeuralNetCNN_Cifar100->printNetLayersInfor(PNeuralNetCNN_Cifar100);
+}
+////////////////////////////////////////////////////////////////////////////////////////////
+///更深的网络更多的滤波器
+///加入随机翻转
+TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
+{
+	TPNeuralNet PNeuralNetCNN_16 = NeuralNetCNNCreate(NetName);
+	TPLayer pNetLayer;
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Input;
+	LayerOption.in_w = 32;
+	LayerOption.in_h = 32;
+	LayerOption.in_depth = 3;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///1////////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 64;
+	LayerOption.stride = 1;
+	LayerOption.padding = 0;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///2////////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///3////////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Pool;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 2;
+	LayerOption.filter_h = 2;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.stride = 2;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///4////////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 128;
+	LayerOption.stride = 1;
+	LayerOption.padding = 2;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///5////////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_Cifar10->init(PNeuralNetCNN_Cifar10, &LayerOption);
+	///6////////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Pool;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 2;
+	LayerOption.filter_h = 2;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.stride = 2;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
+	///7//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 256;
+	LayerOption.stride = 1;
+	LayerOption.padding = 2;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///8//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///9//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 256;
+	LayerOption.stride = 1;
+	LayerOption.padding = 2;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///10//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///11//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Pool;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 2;
+	LayerOption.filter_h = 2;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.stride = 2;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
+	///12//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_FullyConnection;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
+	LayerOption.filter_number = 512;
+	LayerOption.out_depth = LayerOption.filter_number;
+	LayerOption.out_h = 1;
+	LayerOption.out_w = 1;
+	LayerOption.bias = 0;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///13//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
+	///14//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_FullyConnection;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
+	LayerOption.filter_number = 10;
+	LayerOption.out_depth = LayerOption.filter_number;
+	LayerOption.out_h = 1;
+	LayerOption.out_w = 1;
+	LayerOption.bias = 0;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
+	///15//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_SoftMax;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.out_h = 1;
+	LayerOption.out_w = 1;
+	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h; // 10;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
+	NeuralNetInitLeaningParameter(PNeuralNetCNN_16);
+	PNeuralNetCNN_16->printNetLayersInfor(PNeuralNetCNN_16);
+	return PNeuralNetCNN_16;
 }
 ////////////////////////////////////////////////////////////////////
 /// @brief /////////////////////////////////////////////////////////
@@ -579,6 +777,7 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 	TPrediction prediction;
 	bool_t hide_cursor = false;
 	time_t elapsed_time_ms = 0;
+	
 	if (PNeuralNetCNN == NULL || PNeuralNetCNN->backward == NULL || PNeuralNetCNN->forward == NULL || PNeuralNetCNN->init == NULL || PNeuralNetCNN->train == NULL || PNeuralNetCNN->depth < 5)
 	{
 		LOGINFOR("Neural Net CNN is not init!!!\n");
@@ -595,10 +794,15 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 	}
 	elapsed_time_ms = GetTimestamp();
 	PNeuralNetCNN->trainning.trainningGoing = true;
+	srand(time(NULL));
 	while (PNeuralNetCNN->trainning.trainningGoing)
 	{
 		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainning.data_type);
-
+		if (GenerateRandomNumber() >= 0.55)
+		{
+			pTrainningImage->volume->flip(pTrainningImage->volume);
+			//LOGINFOR("random flip");
+		}
 		if (pTrainningImage != NULL)
 		{
 			PNeuralNetCNN->trainning.labelIndex = pTrainningImage->labelIndex;
@@ -654,7 +858,7 @@ void NeuralNetStartPrediction(TPNeuralNet PNeuralNetCNN)
 		LOGINFOR("Neural Net CNN is not init!!!\n");
 		return;
 	}
-	pTestImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.testing_dataset_index, PNeuralNetCNN->trainning.data_type);
+	pTestImage = (TPPicture)Dataset_GetTestingPic(PNeuralNetCNN->trainning.testing_dataset_index, PNeuralNetCNN->trainning.data_type);
 	if (pTestImage != NULL)
 	{
 		PNeuralNetCNN->predict(PNeuralNetCNN, pTestImage->volume);

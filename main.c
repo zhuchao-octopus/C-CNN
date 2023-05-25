@@ -9,11 +9,12 @@
 #include "ann-dataset.h"
 #define NET_CIFAR10_NAME "Cifar10"
 #define NET_CIFAR100_NAME "Cifar100"
-
+TPNeuralNet PNeuralNetCNN_16 = NULL;
 extern TPNeuralNet PNeuralNetCNN_Cifar10, PNeuralNetCNN_Cifar100;
 extern void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
 extern void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
 extern void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
+extern TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName);
 void showBanner(void);
 /////////////////////////////////////////////////////////////////////////////////////////////
 /// 要运行本程序进行训练，需要下载C语言版本Cifar-10 Cifar-100 数据集 
@@ -37,7 +38,7 @@ int main()
 	printf("version:1.0.0.0\n");
 	printf("////////////////////////////////////////////////////////////////////////////////////\n");
 	LOG("InitNeuralNet_CNN Cifar10...\n");
-	NeuralNetInit_Cifar10();
+	NeuralNetInit_Cifar10_11();
 	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar10);
 	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar10);
 
@@ -47,6 +48,8 @@ int main()
 	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar100);
 	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar100);
 
+    //一个深层网络用来学习Cifar100数据集
+	PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("Cifar100");
 	while (true)
 	{
 		printf("\033[%dB", log_lines);
@@ -54,8 +57,9 @@ int main()
 		// printf("\n");
 		printf("\nplease select a menu item to continue...\n");
 		printf("00: Exit.\n");
-		printf("01: Print weight    usage:1 10 Cifar10,three parameters,the first is command,the second is net_layer index and the third is net name.\n");
-		printf("02: Print gradients usage:2 10 Cifar10,it is same as print weight.\n");
+		printf("01: Print weight Usage:Command Layer Type Name,ex:1 10 0 Cifar10,the first is command,the second is layer index,\n");
+		printf("    the third is type(1:input,0:output:2:filters) and the fourth is net name Cifar10/Cifar100.\n");
+		printf("02: Print gradients Usage:2 10 0 Cifar10,it is same as print weight.\n");
 		printf("03: Print neural network information,displays the network structure information.\n");
 
 		printf("04: Start trainning CIFAR-10 one by one,learn one CIFAR-10 picture at a time.\n");
@@ -72,6 +76,7 @@ int main()
 
 		printf("13: Save weights to   file cnn.w\n");
 		printf("14: Load weights from file cnn.w\n");
+		//printf("15: Save weights to bmp\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(cmd_str);
@@ -229,6 +234,24 @@ int main()
 			LOGINFOR("NeuralNet loading...");
 			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar10);
 			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar100);
+			break;
+		case 15:
+			TPPicture pic = Dataset_GetTestingPic(net_layer, Cifar10);
+			TPVolume picv = pic->volume;
+			//TPVolume picv = LoadBmpFileToVolume("test_fruit_and_vegetables_apple_9.bmp");
+			if (picv != NULL)
+			{
+				SaveVolumeToBMP(picv, false, -1, 32, "test_32.bmp");
+				picv->flip(picv);
+				SaveVolumeToBMP(picv, false, -1, 32, "test_32-flip.bmp");
+			}
+			break;
+		case 16:
+			PrintBMP("test_airplane_airplane_3.bmp");
+				break;
+		case 17:
+			CreateBMP("createBMP_24.bmp",32,32,24);
+			CreateBMP("createBMP_32.bmp", 32, 32, 32);
 			break;
 		default:
 			printf("\n");
