@@ -49,7 +49,7 @@ int main()
 	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar100);
 
     //一个深层网络用来学习Cifar100数据集
-	PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("Cifar100");
+	PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("Cifar10");
 	while (true)
 	{
 		printf("\033[%dB", log_lines);
@@ -76,7 +76,7 @@ int main()
 
 		printf("13: Save weights to   file cnn.w\n");
 		printf("14: Load weights from file cnn.w\n");
-		//printf("15: Save weights to bmp\n");
+		printf("15: Start trainning PNeuralNetCNN_16\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(cmd_str);
@@ -234,8 +234,17 @@ int main()
 			LOGINFOR("NeuralNet loading...");
 			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar10);
 			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar100);
+			PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
 			break;
 		case 15:
+			PNeuralNetCNN_16->trainning.trainingSaving = true;
+			PNeuralNetCNN_16->trainning.one_by_one = false;
+			PNeuralNetCNN_16->trainning.batch_by_batch = false;
+			PNeuralNetCNN_16->trainning.trainningGoing = true;
+			//PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
+			NeuralNetStartTrainning(PNeuralNetCNN_16);
+			break;
+		case 16:
 			TPPicture pic = Dataset_GetTestingPic(net_layer, Cifar10);
 			TPVolume picv = pic->volume;
 			//TPVolume picv = LoadBmpFileToVolume("test_fruit_and_vegetables_apple_9.bmp");
@@ -246,12 +255,15 @@ int main()
 				SaveVolumeToBMP(picv, false, -1, 32, "test_32-flip.bmp");
 			}
 			break;
-		case 16:
+		case 17:
 			PrintBMP("test_airplane_airplane_3.bmp");
 				break;
-		case 17:
+		case 18:
 			CreateBMP("createBMP_24.bmp",32,32,24);
 			CreateBMP("createBMP_32.bmp", 32, 32, 32);
+			break;
+		case 19:
+			LOG("%f", GenerateRandomNumber());
 			break;
 		default:
 			printf("\n");

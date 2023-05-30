@@ -614,42 +614,41 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
 /// @brief //////////////////////////////////////////////////////////////////////////
 /// @param PConvLayer
 void ConvolutionLayerForward(TPConvLayer PConvLayer)
-{
-	float32_t sum = 0.00;
+{	
 	uint16_t padding_x = -PConvLayer->padding;
 	uint16_t padding_y = -PConvLayer->padding;
-	uint16_t in_x, in_y;
 	TPVolume inVolume = PConvLayer->layer.in_v;
 	TPVolume outVolume = PConvLayer->layer.out_v;
-
+	uint16_t in_x, in_y;
+	float32_t sum = 0.00;
 	convolutionLayerOutResize(PConvLayer);
 	// for (uint16_t out_d = 0; out_d < PConvLayer->filters->_depth; out_d++)
-	for (uint16_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
 	{
 		TPVolume filter = PConvLayer->filters->volumes[out_d];
 		padding_x = -PConvLayer->padding;
 		padding_y = -PConvLayer->padding;
-		for (uint16_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
+		for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
 		{
 			padding_x = -PConvLayer->padding;
-			for (uint16_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
+			for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
 			{
 				sum = 0.00;
-				for (uint16_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
+				for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
 				{
 					in_y = filter_y + padding_y;
 					if (in_y < 0 || in_y >= inVolume->_h)
 						continue;
 
-					for (uint16_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
+					for (uint32_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
 					{
 						in_x = filter_x + padding_x;
 						if (in_x < 0 || in_x >= inVolume->_w)
 							continue;
 
-						uint16_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
-						uint16_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
-						for (uint16_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
+						uint32_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
+						uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
+						for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
 						{
 							// sum = sum + filter->getValue(filter, filter_x, filter_y, filter_d) * inVolume->getValue(inVolume, in_x, in_y, filter_d);
 							sum = sum + filter->weight->buffer[fx + filter_d] * inVolume->weight->buffer[ix + filter_d];
@@ -657,7 +656,7 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
 					}
 				}
 				sum = sum + PConvLayer->biases->weight->buffer[out_d];
-				uint16_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
+				uint32_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
 				outVolume->weight->buffer[out_idx] = sum;
 				padding_x = padding_x + PConvLayer->stride;
 			}
@@ -665,6 +664,123 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
 		}
 	}
 }
+
+
+void DepthwisePointwiseConvolutionInit(TPConvLayer PConvLayer, TPLayerOption PLayerOption)
+{
+	PConvLayer->layer.LayerType = PLayerOption->LayerType;
+	PConvLayer->l1_decay_rate = PLayerOption->l1_decay_rate;
+	PConvLayer->l2_decay_rate = PLayerOption->l2_decay_rate;
+	PConvLayer->stride = PLayerOption->stride;
+	PConvLayer->padding = PLayerOption->padding;
+	PConvLayer->bias = PLayerOption->bias;
+
+	PConvLayer->layer.in_w = PLayerOption->in_w;
+	PConvLayer->layer.in_h = PLayerOption->in_h;
+	PConvLayer->layer.in_depth = PLayerOption->in_depth; // PLayerOption->filter_depth
+	PConvLayer->layer.in_v = NULL;
+
+	if (PLayerOption->filter_depth != PConvLayer->layer.in_depth)
+		PLayerOption->filter_depth = PConvLayer->layer.in_depth;
+	if (PLayerOption->filter_depth <= 0)
+		PLayerOption->filter_depth = 3;
+
+	PLayerOption->filter_number = 2;
+	PConvLayer->filters = MakeFilters(PLayerOption->filter_w, PLayerOption->filter_h, PLayerOption->filter_depth, PLayerOption->filter_number);
+
+	PConvLayer->layer.out_w = floor((PConvLayer->layer.in_w + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
+	PConvLayer->layer.out_h = floor((PConvLayer->layer.in_h + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
+	PConvLayer->layer.out_depth = PConvLayer->layer.in_depth;// PConvLayer->filters->filterNumber;
+
+	PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
+	PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
+
+	PConvLayer->biases = MakeVolume(1, 1, PConvLayer->layer.out_depth);
+	PConvLayer->biases->init(PConvLayer->biases, 1, 1, PConvLayer->layer.out_depth, PConvLayer->bias);
+
+	for (uint32_t i = 0; i < PConvLayer->layer.out_depth; i++)
+	{
+		PConvLayer->filters->init(PConvLayer->filters->volumes[i], PConvLayer->filters->_w, PConvLayer->filters->_h, PConvLayer->filters->_depth, 0);
+		PConvLayer->filters->volumes[i]->fillGauss(PConvLayer->filters->volumes[i]->weight);
+		// ConvLayer.filters->volumes[i]->fillGauss(ConvLayer.filters->volumes[i]->weight_grad);
+	}
+
+	PLayerOption->out_w = PConvLayer->layer.out_w;
+	PLayerOption->out_h = PConvLayer->layer.out_h;
+	PLayerOption->out_depth = PConvLayer->layer.out_depth;
+}
+void DepthwisePointwiseConvolution(TPConvLayer PConvLayer)
+{
+	uint16_t padding_x = -PConvLayer->padding;
+	uint16_t padding_y = -PConvLayer->padding;
+	TPVolume inVolume = PConvLayer->layer.in_v;
+	TPVolume outVolume = PConvLayer->layer.out_v;
+	// Depthwise convolution
+	TPVolume depthwiseFilter = PConvLayer->filters->volumes[0];
+	// Pointwise convolution
+	TPVolume pointwiseFilter = PConvLayer->filters->volumes[1];
+
+	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
+	{	
+		for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
+		{
+			padding_x = -PConvLayer->padding;
+
+			for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
+			{
+				float32_t sum = 0.0;
+
+				for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
+				{
+					uint32_t in_y = filter_y + padding_y;
+
+					if (in_y < 0 || in_y >= inVolume->_h)
+						continue;
+
+					for (uint16_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
+					{
+						uint32_t in_x = filter_x + padding_x;
+
+						if (in_x < 0 || in_x >= inVolume->_w)
+							continue;
+
+						uint32_t fx = (depthwiseFilter->_w * filter_y + filter_x) * depthwiseFilter->_depth;
+						uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
+
+						for (uint32_t filter_d = 0; filter_d < depthwiseFilter->_depth; filter_d++)
+						{
+							sum += depthwiseFilter->weight->buffer[fx + filter_d] * inVolume->weight->buffer[ix + filter_d];
+						}
+					}
+				}
+
+				uint32_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
+				outVolume->weight->buffer[out_idx] = sum;
+
+				padding_x += PConvLayer->stride;
+			}
+
+			padding_y += PConvLayer->stride;
+		}
+	}
+
+	
+
+	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
+	{
+		for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
+		{
+			for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
+			{
+				uint32_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
+				float32_t depthwise_out = outVolume->weight->buffer[out_idx];
+				float32_t pointwise_out = depthwise_out * pointwiseFilter->weight->buffer[out_d];
+				outVolume->weight->buffer[out_idx] = pointwise_out;
+			}
+		}
+	}
+}
+
 /// @brief ////////////////////////////////////////////////////////////////////////////////
 /// @param PConvLayer
 /// y = wx+b 求关于in w b的偏导数
@@ -678,33 +794,33 @@ void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 	TPVolume outVolume = PConvLayer->layer.out_v;
 	inVolume->fillZero(inVolume->weight_d);
 
-	for (uint16_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
 	{
 		TPVolume filter = PConvLayer->filters->volumes[out_d];
 		padding_x = -PConvLayer->padding;
 		padding_y = -PConvLayer->padding;
-		for (uint16_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
+		for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
 		{
 			padding_x = -PConvLayer->padding;
-			for (uint16_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
+			for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
 			{
 				out_grad = outVolume->getGradValue(outVolume, out_x, out_y, out_d);
 				// assert(!IsFloatUnderflow(out_grad));
-				for (uint16_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
+				for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
 				{
 					in_y = filter_y + padding_y;
 					if (in_y < 0 || in_y >= inVolume->_h)
 						continue;
 
-					for (uint16_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
+					for (uint32_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
 					{
 						in_x = filter_x + padding_x;
 						if (in_x < 0 || in_x >= inVolume->_w)
 							continue;
 
-						uint16_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
-						uint16_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
-						for (uint16_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
+						uint32_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
+						uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
+						for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
 						{
 							filter->weight_d->buffer[fx + filter_d] = filter->weight_d->buffer[fx + filter_d] + inVolume->weight->buffer[ix + filter_d] * out_grad;
 							inVolume->weight_d->buffer[ix + filter_d] = inVolume->weight_d->buffer[ix + filter_d] + filter->weight->buffer[fx + filter_d] * out_grad;
@@ -726,7 +842,7 @@ TPResponse *ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 	TPResponse *tPResponses = malloc(sizeof(TPResponse) * (PConvLayer->layer.out_depth + 1));
 	if (tPResponses == NULL)
 		return NULL;
-	for (uint16_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
 	{
 		TPResponse PResponse = malloc(sizeof(TResponse));
 		if (PResponse != NULL)
@@ -828,7 +944,7 @@ void ReluLayerForward(TPReluLayer PReluLayer)
 	 }
 	 }*/
 	reluLayerOutResize(PReluLayer);
-	for (uint16_t out_l = 0; out_l < PReluLayer->layer.out_v->weight->length; out_l++)
+	for (uint32_t out_l = 0; out_l < PReluLayer->layer.out_v->weight->length; out_l++)
 	{
 		if (PReluLayer->layer.in_v->weight->buffer[out_l] < 0)
 			PReluLayer->layer.out_v->weight->buffer[out_l] = 0;
@@ -841,7 +957,7 @@ void ReluLayerForward(TPReluLayer PReluLayer)
 
 void ReluLayerBackward(TPReluLayer PReluLayer)
 {
-	for (uint16_t out_l = 0; out_l < PReluLayer->layer.in_v->weight->length; out_l++)
+	for (uint32_t out_l = 0; out_l < PReluLayer->layer.in_v->weight->length; out_l++)
 	{
 		if (PReluLayer->layer.out_v->weight->buffer[out_l] <= 0)
 			PReluLayer->layer.in_v->weight_d->buffer[out_l] = 0;
@@ -905,8 +1021,8 @@ void PoolLayerInit(TPPoolLayer PPoolLayer, TPLayerOption PLayerOption)
 
 void poolLayerOutResize(TPPoolLayer PPoolLayer)
 {
-	uint16_t out_w = floor((PPoolLayer->layer.in_w + PPoolLayer->padding * 2 - PPoolLayer->filter->_w) / PPoolLayer->stride + 1);
-	uint16_t out_h = floor((PPoolLayer->layer.in_h + PPoolLayer->padding * 2 - PPoolLayer->filter->_h) / PPoolLayer->stride + 1);
+	uint32_t out_w = floor((PPoolLayer->layer.in_w + PPoolLayer->padding * 2 - PPoolLayer->filter->_w) / PPoolLayer->stride + 1);
+	uint32_t out_h = floor((PPoolLayer->layer.in_h + PPoolLayer->padding * 2 - PPoolLayer->filter->_h) / PPoolLayer->stride + 1);
 	if (PPoolLayer->layer.out_w != out_w || PPoolLayer->layer.out_h != out_h || PPoolLayer->layer.out_depth != PPoolLayer->layer.in_depth)
 	{
 		LOGINFOR("PoolLayer resize out_v from %d x %d x %d to %d x %d x %d", PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, out_w, out_h, PPoolLayer->layer.in_depth);
@@ -943,25 +1059,25 @@ void PoolLayerForward(TPPoolLayer PPoolLayer)
 	poolLayerOutResize(PPoolLayer);
 	outVolu->fillZero(outVolu->weight);
 
-	for (uint16_t out_d = 0; out_d < PPoolLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PPoolLayer->layer.out_depth; out_d++)
 	{
 		x = -PPoolLayer->padding;
 		y = -PPoolLayer->padding;
-		for (uint16_t out_y = 0; out_y < PPoolLayer->layer.out_h; out_y++)
+		for (uint32_t out_y = 0; out_y < PPoolLayer->layer.out_h; out_y++)
 		{
 			x = -PPoolLayer->padding;
 
-			for (uint16_t out_x = 0; out_x < PPoolLayer->layer.out_w; out_x++)
+			for (uint32_t out_x = 0; out_x < PPoolLayer->layer.out_w; out_x++)
 			{
 				max_value = MINFLOAT_NEGATIVE_NUMBER;
 				inx = -1;
 				iny = -1;
-				for (uint16_t filter_y = 0; filter_y < PPoolLayer->filter->_h; filter_y++)
+				for (uint32_t filter_y = 0; filter_y < PPoolLayer->filter->_h; filter_y++)
 				{
 					oy = filter_y + y;
 					if (oy < 0 && oy >= inVolu->_h)
 						continue;
-					for (uint16_t filter_x = 0; filter_x < PPoolLayer->filter->_w; filter_x++)
+					for (uint32_t filter_x = 0; filter_x < PPoolLayer->filter->_w; filter_x++)
 					{
 						ox = filter_x + x;
 						if (ox >= 0 && ox < inVolu->_w && oy >= 0 && oy < inVolu->_h)
@@ -994,19 +1110,19 @@ void PoolLayerBackward(TPPoolLayer PPoolLayer)
 	TPVolume inVolu = PPoolLayer->layer.in_v;
 	TPVolume outVolu = PPoolLayer->layer.out_v;
 	inVolu->fillZero(inVolu->weight_d);
-	uint16_t x, y;
-	for (uint16_t out_d = 0; out_d < PPoolLayer->layer.out_depth; out_d++)
+	uint32_t x, y;
+	for (uint32_t out_d = 0; out_d < PPoolLayer->layer.out_depth; out_d++)
 	{
 		x = -PPoolLayer->padding;
 		y = -PPoolLayer->padding;
-		for (uint16_t out_y = 0; out_y < PPoolLayer->layer.out_h; out_y++)
+		for (uint32_t out_y = 0; out_y < PPoolLayer->layer.out_h; out_y++)
 		{
 			x = -PPoolLayer->padding;
-			for (uint16_t out_x = 0; out_x < PPoolLayer->layer.out_w; out_x++)
+			for (uint32_t out_x = 0; out_x < PPoolLayer->layer.out_w; out_x++)
 			{
 				grad_value = outVolu->getGradValue(outVolu, out_x, out_y, out_d);
-				uint16_t ox = PPoolLayer->switchxy->getValue(PPoolLayer->switchxy, out_x, out_y, out_d);
-				uint16_t oy = PPoolLayer->switchxy->getGradValue(PPoolLayer->switchxy, out_x, out_y, out_d);
+				uint32_t ox = PPoolLayer->switchxy->getValue(PPoolLayer->switchxy, out_x, out_y, out_d);
+				uint32_t oy = PPoolLayer->switchxy->getGradValue(PPoolLayer->switchxy, out_x, out_y, out_d);
 				inVolu->addGradValue(inVolu, ox, oy, out_d, grad_value);
 				x = x + PPoolLayer->stride;
 			}
@@ -1056,7 +1172,7 @@ void FullyConnLayerInit(TPFullyConnLayer PFullyConnLayer, TPLayerOption PLayerOp
 
 	PFullyConnLayer->filters = MakeFilters(PLayerOption->filter_w, PLayerOption->filter_h, inputPoints, PLayerOption->filter_number);
 
-	for (uint16_t i = 0; i < PFullyConnLayer->filters->filterNumber; i++)
+	for (uint32_t i = 0; i < PFullyConnLayer->filters->filterNumber; i++)
 	{
 		PFullyConnLayer->filters->init(PFullyConnLayer->filters->volumes[i], PFullyConnLayer->filters->_w, PFullyConnLayer->filters->_h, inputPoints, 0);
 		PFullyConnLayer->filters->volumes[i]->fillGauss(PFullyConnLayer->filters->volumes[i]->weight);
@@ -1103,14 +1219,14 @@ void FullyConnLayerForward(TPFullyConnLayer PFullyConnLayer)
 	outVolu->fillZero(outVolu->weight);
 	fullConnLayerOutResize(PFullyConnLayer);
 
-	for (uint16_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
 	{
 		TPVolume filter = PFullyConnLayer->filters->volumes[out_d];
 		sum = 0.00;
 
-		uint16_t inputPoints = inVolu->_w * inVolu->_h * inVolu->_depth;
+		uint32_t inputPoints = inVolu->_w * inVolu->_h * inVolu->_depth;
 
-		for (uint16_t ip = 0; ip < inputPoints; ip++)
+		for (uint32_t ip = 0; ip < inputPoints; ip++)
 		{
 			if (filter->weight->length == 0)
 				sum = sum + inVolu->weight->buffer[ip];
@@ -1133,14 +1249,14 @@ void FullyConnLayerBackward(TPFullyConnLayer PFullyConnLayer)
 	TPVolume outVolu = PFullyConnLayer->layer.out_v;
 	inVolu->fillZero(inVolu->weight_d);
 
-	for (uint16_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
 	{
 		TPVolume filter = PFullyConnLayer->filters->volumes[out_d];
 		grad_value = outVolu->weight_d->buffer[out_d];
 
-		uint16_t inputPoints = inVolu->_w * inVolu->_h * inVolu->_depth;
+		uint32_t inputPoints = inVolu->_w * inVolu->_h * inVolu->_depth;
 
-		for (uint16_t out_l = 0; out_l < inputPoints; out_l++)
+		for (uint32_t out_l = 0; out_l < inputPoints; out_l++)
 		{
 			inVolu->weight_d->buffer[out_l] = inVolu->weight_d->buffer[out_l] + filter->weight->buffer[out_l] * grad_value;
 			filter->weight_d->buffer[out_l] = filter->weight_d->buffer[out_l] + inVolu->weight->buffer[out_l] * grad_value;
@@ -1161,7 +1277,7 @@ TPResponse *FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 	TPResponse *tPResponses = malloc(sizeof(TPResponse) * (PFullyConnLayer->layer.out_depth + 1));
 	if (tPResponses == NULL)
 		return NULL;
-	for (uint16_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
 	{
 		TPResponse PResponse = malloc(sizeof(TResponse));
 		if (PResponse != NULL)
@@ -1265,21 +1381,21 @@ void SoftmaxLayerForward(TPSoftmaxLayer PSoftmaxLayer)
 	softmaxLayOutResize(PSoftmaxLayer);
 	outVolu->fillZero(outVolu->weight);
 
-	for (uint16_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
 	{
 		if (inVolu->weight->buffer[out_d] > max_value)
 		{
 			max_value = inVolu->weight->buffer[out_d];
 		}
 	}
-	for (uint16_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
 	{
 		temp = inVolu->weight->buffer[out_d] - max_value;
 		expv = exp(temp);
 		PSoftmaxLayer->exp->buffer[out_d] = expv;
 		sum = sum + expv;
 	}
-	for (uint16_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
 	{
 		PSoftmaxLayer->exp->buffer[out_d] = PSoftmaxLayer->exp->buffer[out_d] / sum;
 		PSoftmaxLayer->layer.out_v->weight->buffer[out_d] = PSoftmaxLayer->exp->buffer[out_d];
@@ -1294,7 +1410,7 @@ void SoftmaxLayerBackward(TPSoftmaxLayer PSoftmaxLayer)
 	TPVolume outVolu = PSoftmaxLayer->layer.out_v;
 	inVolu->fillZero(outVolu->weight_d);
 	float32_t dw; // 计算 delta weight
-	for (uint16_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
+	for (uint32_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
 	{
 		if (out_d == PSoftmaxLayer->expected_value)
 			dw = -(1 - PSoftmaxLayer->exp->buffer[out_d]);
@@ -1817,7 +1933,7 @@ void NeuralNetUpdatePrediction(TPNeuralNet PNeuralNet)
 	if (PNeuralNet->trainning.pPredictions == NULL)
 		return;
 	TPSoftmaxLayer PSoftmaxLayer = ((TPSoftmaxLayer)PNeuralNet->layers[PNeuralNet->depth - 1]);
-	for (uint16_t i = 0; i < PSoftmaxLayer->layer.out_v->weight->length; i++)
+	for (uint32_t i = 0; i < PSoftmaxLayer->layer.out_v->weight->length; i++)
 	{
 		TPrediction *pPrediction = NULL;
 
@@ -2022,13 +2138,13 @@ void NeuralNetPrintTrainningInfor(TPNeuralNet PNeuralNet)
 {
 	time_t avg_iterations_time = 0;
 #if 1
-	LOGINFOR("DatasetTotal    :%08ld  ", PNeuralNet->trainning.datasetTotal);
-	LOGINFOR("DatasetIndex    :%08ld  ", PNeuralNet->trainning.trinning_dataset_index);
-	LOGINFOR("EpochCount      :%08ld  ", PNeuralNet->trainning.epochCount);
-	LOGINFOR("SampleCount     :%08ld  ", PNeuralNet->trainning.sampleCount);
-	LOGINFOR("LabelIndex      :%08ld  ", PNeuralNet->trainning.labelIndex);
-	LOGINFOR("BatchCount      :%08ld  ", PNeuralNet->trainning.batchCount);
-	LOGINFOR("Iterations      :%08ld  ", PNeuralNet->trainning.iterations);
+	LOGINFOR("DatasetTotal    :%09ld  ", PNeuralNet->trainning.datasetTotal);
+	LOGINFOR("DatasetIndex    :%09ld  ", PNeuralNet->trainning.trinning_dataset_index);
+	LOGINFOR("EpochCount      :%09ld  ", PNeuralNet->trainning.epochCount);
+	LOGINFOR("SampleCount     :%09ld  ", PNeuralNet->trainning.sampleCount);
+	LOGINFOR("LabelIndex      :%09ld  ", PNeuralNet->trainning.labelIndex);
+	LOGINFOR("BatchCount      :%09ld  ", PNeuralNet->trainning.batchCount);
+	LOGINFOR("Iterations      :%09ld  ", PNeuralNet->trainning.iterations);
 
 	LOGINFOR("AverageCostLoss :%.6f", PNeuralNet->trainning.sum_cost_loss / PNeuralNet->trainning.sampleCount);
 	LOGINFOR("L1_decay_loss   :%.6f", PNeuralNet->trainning.sum_l1_decay_loss / PNeuralNet->trainning.sampleCount);
@@ -2039,12 +2155,12 @@ void NeuralNetPrintTrainningInfor(TPNeuralNet PNeuralNet)
 	if (PNeuralNet->trainning.iterations > 0)
 		avg_iterations_time = PNeuralNet->totalTime / PNeuralNet->trainning.iterations;
 
-	LOGINFOR("TotalElapsedTime:%lld", PNeuralNet->totalTime);
-	LOGINFOR("ForwardTime     :%05lld", PNeuralNet->fwTime);
-	LOGINFOR("BackwardTime    :%05lld", PNeuralNet->bwTime);
-	LOGINFOR("OptimTime       :%05lld", PNeuralNet->optimTime);
-	LOGINFOR("AvgBatchTime    :%05lld", avg_iterations_time);
-	LOGINFOR("AvgSampleTime   :%05lld", PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
+	LOGINFOR("TotalElapsedTime:%9lld", PNeuralNet->totalTime);
+	LOGINFOR("ForwardTime     :%09lld", PNeuralNet->fwTime);
+	LOGINFOR("BackwardTime    :%09lld", PNeuralNet->bwTime);
+	LOGINFOR("OptimTime       :%09lld", PNeuralNet->optimTime);
+	LOGINFOR("AvgBatchTime    :%09lld", avg_iterations_time);
+	LOGINFOR("AvgSampleTime   :%09lld", PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
 #else
 	LOGINFOR("DatasetTotal:%06d DatasetIndex:%06d EpochCount:%06d SampleCount:%06d LabelIndex:%06d BatchCount:%06d Iterations:%06d",
 			 PNeuralNet->trainning.datasetTotal,

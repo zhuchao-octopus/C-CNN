@@ -432,7 +432,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 64;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 0;
 	LayerOption.bias = 0.1;
@@ -469,7 +469,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 128;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -483,7 +483,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_w = pNetLayer->out_w;
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
-	PNeuralNetCNN_Cifar10->init(PNeuralNetCNN_Cifar10, &LayerOption);
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 	///6////////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
@@ -507,7 +507,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 256;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -532,7 +532,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 256;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -550,6 +550,57 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	///11//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 32;
+	LayerOption.stride = 1;
+	LayerOption.padding = 2;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///12//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
+	///13//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 32;
+	LayerOption.stride = 1;
+	LayerOption.padding = 2;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///14//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///15//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_Pool;
 	LayerOption.in_w = pNetLayer->out_w;
 	LayerOption.in_h = pNetLayer->out_h;
@@ -560,7 +611,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.stride = 2;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 
-	///12//////////////////////////////////////////////////////////////
+	///16//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_FullyConnection;
@@ -568,7 +619,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
-	LayerOption.filter_number = 512;
+	LayerOption.filter_number = 32;
 	LayerOption.out_depth = LayerOption.filter_number;
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
@@ -576,7 +627,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.l1_decay_rate = 1;
 	LayerOption.l2_decay_rate = 1;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
-	///13//////////////////////////////////////////////////////////////
+	///17//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_ReLu;
@@ -585,7 +636,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_depth = pNetLayer->out_depth;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 
-	///14//////////////////////////////////////////////////////////////
+	///18//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_FullyConnection;
@@ -602,7 +653,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.l2_decay_rate = 1;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 
-	///15//////////////////////////////////////////////////////////////
+	///19//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_SoftMax;
@@ -614,8 +665,10 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h; // 10;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 
-	NeuralNetInitLeaningParameter(PNeuralNetCNN_16);
+	LOG("\n");
 	PNeuralNetCNN_16->printNetLayersInfor(PNeuralNetCNN_16);
+	LOG("\n");
+	NeuralNetInitLeaningParameter(PNeuralNetCNN_16);
 	return PNeuralNetCNN_16;
 }
 ////////////////////////////////////////////////////////////////////
@@ -628,7 +681,7 @@ void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN)
 		return;
 	}
 	PNeuralNetCNN->trainningParam.optimize_method = Optm_Adadelta;
-	PNeuralNetCNN->trainningParam.batch_size = 32;
+	PNeuralNetCNN->trainningParam.batch_size = 16;
 	PNeuralNetCNN->trainningParam.l1_decay_rate = 0;
 	PNeuralNetCNN->trainningParam.l2_decay_rate = 0.0001;
 	PNeuralNetCNN->trainningParam.beta1 = 0.9;
@@ -670,6 +723,7 @@ void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN)
 	PNeuralNetCNN->trainning.batch_by_batch = false;
 	PNeuralNetCNN->trainning.one_by_one = false;
 	PNeuralNetCNN->totalTime = 0;
+	LOG("\n");
 	LOG("[LeaningParameters]:data_type:%s optimize_method:%d batch_size:%d l1_decay_rate:%f l2_decay_rate:%f\n",
 		GetDataSetName(PNeuralNetCNN->trainning.data_type),
 		PNeuralNetCNN->trainningParam.optimize_method,
@@ -798,7 +852,7 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 	while (PNeuralNetCNN->trainning.trainningGoing)
 	{
 		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainning.data_type);
-		if (GenerateRandomNumber() >= 0.55)
+		if (GenerateRandomNumber() < 0.1)
 		{
 			pTrainningImage->volume->flip(pTrainningImage->volume);
 			//LOGINFOR("random flip");
@@ -815,11 +869,11 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 			}
 			PNeuralNetCNN->totalTime = GetTimestamp() - elapsed_time_ms;
 			NeuralNetStartPrediction(PNeuralNetCNN);
-#ifdef PLATFORM_STM32
+			#ifdef PLATFORM_STM32
 			PNeuralNetCNN->printTrainningInfor(PNeuralNetCNN);
-#else PLATFORM_WINDOWS
-			PrintTrainningInfor();
-#endif
+			#else PLATFORM_WINDOWS
+			PrintTrainningInfor(PNeuralNetCNN);
+			#endif
 		}
 		else
 		{
@@ -874,73 +928,73 @@ void NeuralNetStartPrediction(TPNeuralNet PNeuralNetCNN)
 		PNeuralNetCNN->trainning.testing_dataset_index = 0;
 	}
 }
-void PrintTrainningInfor()
+
+void PrintTrainningInfor(TPNeuralNet PNeuralNetCNN)
 {
 	time_t avg_iterations_time = 0;
-#define FORMATD = "%06d\n"
-#define FORMATF = "%9.6f\n"
+    #define FORMATD = "%06d\n"
+    #define FORMATF = "%9.6f\n"
 
-#if 1
-	if (strcmp(PNeuralNetCNN_Cifar10->name, "Cifar10") == 0 && PNeuralNetCNN_Cifar10->trainning.sampleCount > 0)
+	#if 1
+	if (strcmp(PNeuralNetCNN->name, "Cifar10") == 0 && PNeuralNetCNN->trainning.sampleCount > 0)
 	{
-		LOGINFO("NeuralNetName   :%s  ", PNeuralNetCNN_Cifar10->name);
-		LOGINFO("DatasetTotal    :%08d  ", PNeuralNetCNN_Cifar10->trainning.datasetTotal);
-		LOGINFO("DatasetIndex    :%08d  ", PNeuralNetCNN_Cifar10->trainning.trinning_dataset_index);
-		LOGINFO("EpochCount      :%08d  ", PNeuralNetCNN_Cifar10->trainning.epochCount);
-		LOGINFO("SampleCount     :%08d  ", PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("LabelIndex      :%08d  ", PNeuralNetCNN_Cifar10->trainning.labelIndex);
-		LOGINFO("BatchCount      :%08d  ", PNeuralNetCNN_Cifar10->trainning.batchCount);
-		LOGINFO("Iterations      :%08d  ", PNeuralNetCNN_Cifar10->trainning.iterations);
+		LOGINFO("NeuralNetName   :%s  ", PNeuralNetCNN->name);
+		LOGINFO("DatasetTotal    :%09d  ", PNeuralNetCNN->trainning.datasetTotal);
+		LOGINFO("DatasetIndex    :%09d  ", PNeuralNetCNN->trainning.trinning_dataset_index);
+		LOGINFO("EpochCount      :%09d  ", PNeuralNetCNN->trainning.epochCount);
+		LOGINFO("SampleCount     :%09d  ", PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("LabelIndex      :%09d  ", PNeuralNetCNN->trainning.labelIndex);
+		LOGINFO("BatchCount      :%09d  ", PNeuralNetCNN->trainning.batchCount);
+		LOGINFO("Iterations      :%09d  ", PNeuralNetCNN->trainning.iterations);
 
-		LOGINFO("AverageCostLoss :%.6f", PNeuralNetCNN_Cifar10->trainning.sum_cost_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("L1_decay_loss   :%.6f", PNeuralNetCNN_Cifar10->trainning.sum_l1_decay_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("L2_decay_loss   :%.6f", PNeuralNetCNN_Cifar10->trainning.sum_l2_decay_loss / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("TrainingAccuracy:%.6f", PNeuralNetCNN_Cifar10->trainning.trainingAccuracy / PNeuralNetCNN_Cifar10->trainning.sampleCount);
-		LOGINFO("TestingAccuracy :%.6f", PNeuralNetCNN_Cifar10->trainning.testingAccuracy / PNeuralNetCNN_Cifar10->trainning.sampleCount);
+		LOGINFO("AverageCostLoss :%9.6f", PNeuralNetCNN->trainning.sum_cost_loss / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("L1_decay_loss   :%9.6f", PNeuralNetCNN->trainning.sum_l1_decay_loss / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("L2_decay_loss   :%9.6f", PNeuralNetCNN->trainning.sum_l2_decay_loss / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("TrainingAccuracy:%9.6f", PNeuralNetCNN->trainning.trainingAccuracy / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("TestingAccuracy :%9.6f", PNeuralNetCNN->trainning.testingAccuracy / PNeuralNetCNN->trainning.sampleCount);
 
-		if (PNeuralNetCNN_Cifar10->trainning.iterations > 0)
-			avg_iterations_time = PNeuralNetCNN_Cifar10->totalTime / PNeuralNetCNN_Cifar10->trainning.iterations;
+		if (PNeuralNetCNN->trainning.iterations > 0)
+			avg_iterations_time = PNeuralNetCNN->totalTime / PNeuralNetCNN->trainning.iterations;
 
-		LOGINFO("TotalElapsedTime:%08lld", PNeuralNetCNN_Cifar10->totalTime);
-		LOGINFO("ForwardTime     :%08lld", PNeuralNetCNN_Cifar10->fwTime);
-		LOGINFO("BackwardTime    :%08lld", PNeuralNetCNN_Cifar10->bwTime);
-		LOGINFO("OptimTime       :%08lld", PNeuralNetCNN_Cifar10->optimTime);
-		LOGINFO("AvgBatchTime    :%08lld", avg_iterations_time);
-		LOGINFO("AvgSampleTime   :%08lld", PNeuralNetCNN_Cifar10->totalTime / PNeuralNetCNN_Cifar10->trainning.sampleCount);
+		LOGINFO("TotalElapsedTime:%09lld", PNeuralNetCNN->totalTime);
+		LOGINFO("ForwardTime     :%09lld", PNeuralNetCNN->fwTime);
+		LOGINFO("BackwardTime    :%09lld", PNeuralNetCNN->bwTime);
+		LOGINFO("OptimTime       :%09lld", PNeuralNetCNN->optimTime);
+		LOGINFO("AvgBatchTime    :%09lld", avg_iterations_time);
+		LOGINFO("AvgSampleTime   :%09lld", PNeuralNetCNN->totalTime / PNeuralNetCNN->trainning.sampleCount);
 		// if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
 		printf("\033[19A");
 	}
-	if (strcmp(PNeuralNetCNN_Cifar100->name, "Cifar100") == 0 && PNeuralNetCNN_Cifar100->trainning.sampleCount > 0)
+	if (strcmp(PNeuralNetCNN->name, "Cifar100") == 0 && PNeuralNetCNN->trainning.sampleCount > 0)
 	{
-		LOGINFO("NeuralNetName   :\t\t%06s", PNeuralNetCNN_Cifar100->name);
-		LOGINFO("DatasetTotal    :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.datasetTotal);
-		LOGINFO("DatasetIndex    :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.trinning_dataset_index);
-		LOGINFO("EpochCount      :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.epochCount);
-		LOGINFO("SampleCount     :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("LabelIndex      :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.labelIndex);
-		LOGINFO("BatchCount      :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.batchCount);
-		LOGINFO("Iterations      :\t\t%06d", PNeuralNetCNN_Cifar100->trainning.iterations);
+		LOGINFO("NeuralNetName   :\t\t%06s", PNeuralNetCNN->name);
+		LOGINFO("DatasetTotal    :\t\t%06d", PNeuralNetCNN->trainning.datasetTotal);
+		LOGINFO("DatasetIndex    :\t\t%06d", PNeuralNetCNN->trainning.trinning_dataset_index);
+		LOGINFO("EpochCount      :\t\t%06d", PNeuralNetCNN->trainning.epochCount);
+		LOGINFO("SampleCount     :\t\t%06d", PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("LabelIndex      :\t\t%06d", PNeuralNetCNN->trainning.labelIndex);
+		LOGINFO("BatchCount      :\t\t%06d", PNeuralNetCNN->trainning.batchCount);
+		LOGINFO("Iterations      :\t\t%06d", PNeuralNetCNN->trainning.iterations);
 
-		LOGINFO("AverageCostLoss :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.sum_cost_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("L1_decay_loss   :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.sum_l1_decay_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("L2_decay_loss   :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.sum_l2_decay_loss / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("TrainingAccuracy:\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.trainingAccuracy / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		LOGINFO("TestingAccuracy :\t\t%.6f", PNeuralNetCNN_Cifar100->trainning.testingAccuracy / PNeuralNetCNN_Cifar100->trainning.sampleCount);
+		LOGINFO("AverageCostLoss :\t\t%.6f", PNeuralNetCNN->trainning.sum_cost_loss / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("L1_decay_loss   :\t\t%.6f", PNeuralNetCNN->trainning.sum_l1_decay_loss / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("L2_decay_loss   :\t\t%.6f", PNeuralNetCNN->trainning.sum_l2_decay_loss / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("TrainingAccuracy:\t\t%.6f", PNeuralNetCNN->trainning.trainingAccuracy / PNeuralNetCNN->trainning.sampleCount);
+		LOGINFO("TestingAccuracy :\t\t%.6f", PNeuralNetCNN->trainning.testingAccuracy / PNeuralNetCNN->trainning.sampleCount);
 
-		if (PNeuralNetCNN_Cifar100->trainning.iterations > 0)
-			avg_iterations_time = PNeuralNetCNN_Cifar100->totalTime / PNeuralNetCNN_Cifar100->trainning.iterations;
+		if (PNeuralNetCNN->trainning.iterations > 0)
+			avg_iterations_time = PNeuralNetCNN->totalTime / PNeuralNetCNN->trainning.iterations;
 
-		LOGINFO("TotalElapsedTime:\t\t%08lld", PNeuralNetCNN_Cifar100->totalTime);
-		LOGINFO("ForwardTime     :\t\t%05lld", PNeuralNetCNN_Cifar100->fwTime);
-		LOGINFO("BackwardTime    :\t\t%05lld", PNeuralNetCNN_Cifar100->bwTime);
-		LOGINFO("OptimTime       :\t\t%05lld", PNeuralNetCNN_Cifar100->optimTime);
+		LOGINFO("TotalElapsedTime:\t\t%08lld", PNeuralNetCNN->totalTime);
+		LOGINFO("ForwardTime     :\t\t%05lld", PNeuralNetCNN->fwTime);
+		LOGINFO("BackwardTime    :\t\t%05lld", PNeuralNetCNN->bwTime);
+		LOGINFO("OptimTime       :\t\t%05lld", PNeuralNetCNN->optimTime);
 		LOGINFO("AvgBatchTime    :\t\t%05lld", avg_iterations_time);
-		LOGINFO("AvgSampleTime   :\t\t%05lld", PNeuralNetCNN_Cifar100->totalTime / PNeuralNetCNN_Cifar100->trainning.sampleCount);
-		// if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
+		LOGINFO("AvgSampleTime   :\t\t%05lld", PNeuralNetCNN->totalTime / PNeuralNetCNN->trainning.sampleCount);
+		// if (PNeuralNetCNN->trainning.batchCount > 1 || PNeuralNetCNN->trainning.batchCount > 1)
 		printf("\033[19A");
 	}
-
-#else
+	#else
 	LOGINFOR("DatasetTotal:%06d DatasetIndex:%06d EpochCount:%06d SampleCount:%06d LabelIndex:%06d BatchCount:%06d Iterations:%06d",
 			 PNeuralNet->trainning.datasetTotal,
 			 PNeuralNet->trainning.trinning_dataset_index,
@@ -967,5 +1021,5 @@ void PrintTrainningInfor()
 			 PNeuralNet->optimTime,
 			 avg_iterations_time,
 			 PNeuralNet->totalTime / PNeuralNet->trainning.sampleCount);
-#endif
+	#endif
 }
