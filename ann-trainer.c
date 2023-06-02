@@ -560,7 +560,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 64;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -586,7 +586,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 64;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -612,7 +612,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 64;
+	LayerOption.filter_number = 32;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -648,7 +648,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
-	LayerOption.filter_number = 64;
+	LayerOption.filter_number = 32;
 	LayerOption.out_depth = LayerOption.filter_number;
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
@@ -674,7 +674,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
-	LayerOption.filter_number = 64;
+	LayerOption.filter_number = 32;
 	LayerOption.out_depth = LayerOption.filter_number;
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
