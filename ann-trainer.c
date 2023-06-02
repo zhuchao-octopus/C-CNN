@@ -1,8 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 /*
- * trainer-cnn.c
- *
- *  Created on: 2023��4��22��
+ *  trainer-cnn.c
+ *  Home Page :http://www.1234998.top
+ *  Created on: May 20, 2023
  *  Author: M
  */
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -20,15 +20,18 @@
 void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
 void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
 void NeuralNetStartPrediction(TPNeuralNet PNeuralNetCNN);
-void PrintTrainningInfor(void);
+void PrintTrainningInfor(TPNeuralNet PNeuralNetCNN);
+
 /////////////////////////////////////////////////////////////////////////////////////////////
-// 定义两个学习网络
+// 定义三个不同深度的神经网络
 #define NET_CIFAR10_NAME "Cifar10"
 #define NET_CIFAR100_NAME "Cifar100"
 #define NET_CIFAR_16_NAME "Cifar100"
+
+// 预定义三个不同深度的网络模型用来学习Cifar10和Cifar100
 TPNeuralNet PNeuralNetCNN_Cifar10 = NULL;
 TPNeuralNet PNeuralNetCNN_Cifar100 = NULL;
-
+TPNeuralNet PNeuralNetCNN_16 = NULL;
 
 // TLayerOption InputOption = {Layer_Type_Input, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // TLayerOption ConvOption = {Layer_Type_Convolution, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -557,7 +560,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 32;
+	LayerOption.filter_number = 64;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -583,7 +586,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.filter_w = 3;
 	LayerOption.filter_h = 3;
 	LayerOption.filter_depth = LayerOption.in_depth;
-	LayerOption.filter_number = 32;
+	LayerOption.filter_number = 64;
 	LayerOption.stride = 1;
 	LayerOption.padding = 2;
 	LayerOption.bias = 0.1;
@@ -598,7 +601,33 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+
 	///15//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_Convolution;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_w = 3;
+	LayerOption.filter_h = 3;
+	LayerOption.filter_depth = LayerOption.in_depth;
+	LayerOption.filter_number = 64;
+	LayerOption.stride = 1;
+	LayerOption.padding = 2;
+	LayerOption.bias = 0.1;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///16//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_ReLu;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///17//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_Pool;
@@ -611,7 +640,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.stride = 2;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 
-	///16//////////////////////////////////////////////////////////////
+	///18//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_FullyConnection;
@@ -619,7 +648,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
-	LayerOption.filter_number = 32;
+	LayerOption.filter_number = 64;
 	LayerOption.out_depth = LayerOption.filter_number;
 	LayerOption.out_h = 1;
 	LayerOption.out_w = 1;
@@ -627,7 +656,8 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.l1_decay_rate = 1;
 	LayerOption.l2_decay_rate = 1;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
-	///17//////////////////////////////////////////////////////////////
+	///19//////////////////////////////////////////////////////////////
+	#if 0
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_ReLu;
@@ -635,8 +665,26 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.in_h = pNetLayer->out_h;
 	LayerOption.in_depth = pNetLayer->out_depth;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	#endif
+	///20//////////////////////////////////////////////////////////////
+	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
+	memset(&LayerOption, 0, sizeof(TLayerOption));
+	LayerOption.LayerType = Layer_Type_FullyConnection;
+	LayerOption.in_w = pNetLayer->out_w;
+	LayerOption.in_h = pNetLayer->out_h;
+	LayerOption.in_depth = pNetLayer->out_depth;
+	LayerOption.filter_depth = LayerOption.in_w * LayerOption.in_h * LayerOption.in_depth;
+	LayerOption.filter_number = 64;
+	LayerOption.out_depth = LayerOption.filter_number;
+	LayerOption.out_h = 1;
+	LayerOption.out_w = 1;
+	LayerOption.bias = 0;
+	LayerOption.l1_decay_rate = 1;
+	LayerOption.l2_decay_rate = 1;
+	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
+	///21//////////////////////////////////////////////////////////////
 
-	///18//////////////////////////////////////////////////////////////
+	///22//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_FullyConnection;
@@ -653,7 +701,7 @@ TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName)
 	LayerOption.l2_decay_rate = 1;
 	PNeuralNetCNN_16->init(PNeuralNetCNN_16, &LayerOption);
 
-	///19//////////////////////////////////////////////////////////////
+	///23//////////////////////////////////////////////////////////////
 	pNetLayer = PNeuralNetCNN_16->layers[PNeuralNetCNN_16->depth - 1];
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_SoftMax;
@@ -722,6 +770,7 @@ void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN)
 	PNeuralNetCNN->trainning.overflow = false;
 	PNeuralNetCNN->trainning.batch_by_batch = false;
 	PNeuralNetCNN->trainning.one_by_one = false;
+	PNeuralNetCNN->trainning.randomFlip = false;
 	PNeuralNetCNN->totalTime = 0;
 	LOG("\n");
 	LOG("[LeaningParameters]:data_type:%s optimize_method:%d batch_size:%d l1_decay_rate:%f l2_decay_rate:%f\n",
@@ -852,7 +901,7 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 	while (PNeuralNetCNN->trainning.trainningGoing)
 	{
 		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainning.data_type);
-		if (GenerateRandomNumber() < 0.1)
+		if (GenerateRandomNumber() < 0.5 && PNeuralNetCNN->trainning.randomFlip)
 		{
 			pTrainningImage->volume->flip(pTrainningImage->volume);
 			//LOGINFOR("random flip");

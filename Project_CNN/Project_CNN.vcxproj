@@ -24,7 +24,7 @@
     <ProjectGuid>{a47f7d6c-7aa9-4996-865e-953392ac92d3}</ProjectGuid>
     <RootNamespace>ProjectCNN</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>Project_C-CNN</ProjectName>
+    <ProjectName>Octopus_C-CNN</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

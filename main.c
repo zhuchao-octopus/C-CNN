@@ -1,28 +1,36 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////////////////
-// main.c: 定义应用程序的入口点。
-// test demo
+/*
+ *  main.c test demo 定义应用程序的入口点
+ *  Home Page :http://www.1234998.top
+ *  Created on: May 20, 2023
+ *  Author: M
+ */
+/////////////////////////////////////////////////////////////////////////////////////////////
 // 要运行本程序进行训练，需要下载C语言版本Cifar-10 Cifar-100 数据集
 // 下载地址：http://www.cs.toronto.edu/~kriz/cifar.html
 // 下载解压后放在工程目录下面
 /////////////////////////////////////////////////////////////////////////////////////////////
+
 #include "ann-cnn.h"
 #include "ann-dataset.h"
+
 #define NET_CIFAR10_NAME "Cifar10"
 #define NET_CIFAR100_NAME "Cifar100"
-TPNeuralNet PNeuralNetCNN_16 = NULL;
-extern TPNeuralNet PNeuralNetCNN_Cifar10, PNeuralNetCNN_Cifar100;
+
+// 三个不同深度的网络模型用来学习Cifar10和Cifar100数据集
+extern TPNeuralNet PNeuralNetCNN_Cifar10;
+extern TPNeuralNet PNeuralNetCNN_Cifar100;
+extern TPNeuralNet PNeuralNetCNN_16;
+
 extern void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
 extern void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
 extern void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
 extern TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName);
+
 void showBanner(void);
+
 /////////////////////////////////////////////////////////////////////////////////////////////
-/// 要运行本程序进行训练，需要下载C语言版本Cifar-10 Cifar-100 数据集 
-/// 下载地址：http://www.cs.toronto.edu/~kriz/cifar.html
-/// 下载解压后放在工程目录下面
-/// 创建两个深度学习网络PNeuralNetCNN_Cifar10, PNeuralNetCNN_Cifar100
-/// 同时学习Cifar10和Cifar100数据集
-/// 
+
 int main()
 {
 	char cmd_str[32] = "";
@@ -48,7 +56,7 @@ int main()
 	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar100);
 	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar100);
 
-    //一个深层网络用来学习Cifar100数据集
+	//一个深层网络用来学习Cifar100数据集，类似VGG16
 	PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("Cifar10");
 	while (true)
 	{
@@ -80,7 +88,7 @@ int main()
 		printf("\nplease select a menu item to continue:");
 
 		gets(cmd_str);
-		sscanf(cmd_str, "%d %d %d %s", &net_cmd, &net_layer,&net_io, net_name);
+		sscanf(cmd_str, "%d %d %d %s", &net_cmd, &net_layer, &net_io, net_name);
 		printf("command:%d layer:%d io:%d name:%s\n", net_cmd, net_layer, net_io, net_name);
 
 		switch (net_cmd)
@@ -242,6 +250,7 @@ int main()
 			PNeuralNetCNN_16->trainning.batch_by_batch = false;
 			PNeuralNetCNN_16->trainning.trainningGoing = true;
 			//PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
+			PNeuralNetCNN_16->trainning.randomFlip = false;
 			NeuralNetStartTrainning(PNeuralNetCNN_16);
 			break;
 		case 16:
@@ -257,9 +266,9 @@ int main()
 			break;
 		case 17:
 			PrintBMP("test_airplane_airplane_3.bmp");
-				break;
+			break;
 		case 18:
-			CreateBMP("createBMP_24.bmp",32,32,24);
+			CreateBMP("createBMP_24.bmp", 32, 32, 24);
 			CreateBMP("createBMP_32.bmp", 32, 32, 32);
 			break;
 		case 19:
@@ -277,7 +286,7 @@ int main()
 void showBanner(void)
 {
 	char pwd_path[100]; // print work directory
-	FILE *fp = fopen("../banner.txt", "r");
+	FILE* fp = fopen("../banner.txt", "r");
 
 	if (fp != NULL)
 	{
@@ -292,50 +301,4 @@ void showBanner(void)
 	// if (getcwd(pwd_path, 512) != NULL)
 	//	LOGINFOR("%s\n", pwd_path);
 }
-#if 0
-int main()
-{
-	float *ptr;
-	int i;
-	float ft = -3.1415926;
-	// 动态申请一块内存，存储10个浮点数
-	ptr = (float *)malloc(10 * sizeof(float));
 
-	// 检查内存是否申请成功
-	if (ptr == NULL)
-	{
-		printf("内存申请失败！\n");
-		exit(1);
-	}
-
-	// 初始化数组
-	for (i = 0; i < 10; i++)
-	{
-		ptr[i] = (i * 0.1);
-	}
-
-	// 输出数组
-	printf("输出数组////////////////////////////////////\n");
-	for (i = 0; i < 10; i++)
-	{
-		printf("%.3f ", ptr[i]);
-	}
-
-	printf("\n///////////////////////////////////////////\n");
-	printf("%f\n", (ft));
-	printf("%f\n", 0.120002);
-	// 释放内存
-	free(ptr);
-
-	TPVolume pv = MakeVolume(1, 1, 10);
-	pv->init(pv, 1, 1, 10, 0.10);
-	// pv->weight->buffer[0]=0.25;
-	// pv->setValue(pv,0,0,6,6.1);
-	// pv->print(pv, 0);
-
-	pv->fillGauss(pv->weight);
-	pv->print(pv, 0);
-
-	return 0;
-}
-#endif

@@ -1,3 +1,11 @@
+/////////////////////////////////////////////////////////////////////////////////////////////
+/*
+ *  ann-dataset.c
+ *  Home Page :http://www.1234998.top
+ *  Created on: May 20, 2023
+ *  Author: M
+ */
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef PLATFORM_STM32
 #include "usart.h"
@@ -384,8 +392,8 @@ TPVolume LoadBmpFileToVolume(const char *FileName)
 
 // Min - Max Normalization 最小 - 最大值标准化：
 // 也称为离差标准化，是对原始数据的线性变换，使结果值映射到[0 - 1] 之间。
-//  实现方法是将变量值减去最小值并除以最大值和最小值的差。
-//  将Volume结构体中的张量保存为BMP文件
+// 实现方法是将变量值减去最小值并除以最大值和最小值的差。
+// 将Volume结构体中的张量保存为BMP文件
 void SaveVolumeToBMP(TPVolume PVolume, bool_t Grads, uint16_t Depth, uint16_t biBitCount, const char *FileName)
 {
     uint16_t width = PVolume->_w;

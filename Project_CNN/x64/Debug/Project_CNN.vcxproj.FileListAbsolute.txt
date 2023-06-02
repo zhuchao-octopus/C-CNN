@@ -1,1 +1,2 @@
 F:\CProjects\CNN\Project_CNN\x64\Debug\Project_C-CNN.exe
+F:\CProjects\CNN\Project_CNN\x64\Debug\Octopus_C-CNN.exe
