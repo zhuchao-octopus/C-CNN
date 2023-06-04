@@ -5,11 +5,11 @@
  *  Created on: May 20, 2023
  *  Author: M
  */
-/////////////////////////////////////////////////////////////////////////////////////////////
-// 要运行本程序进行训练，需要下载C语言版本Cifar-10 Cifar-100 数据集
-// 下载地址：http://www.cs.toronto.edu/~kriz/cifar.html
-// 下载解压后放在工程目录下面
-/////////////////////////////////////////////////////////////////////////////////////////////
+ /////////////////////////////////////////////////////////////////////////////////////////////
+ // 要运行本程序进行训练，需要下载C语言版本Cifar-10 Cifar-100 数据集
+ // 下载地址：http://www.cs.toronto.edu/~kriz/cifar.html
+ // 下载解压后放在工程目录下面
+ /////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "ann-cnn.h"
 #include "ann-dataset.h"
@@ -17,10 +17,13 @@
 #define NET_CIFAR10_NAME "Cifar10"
 #define NET_CIFAR100_NAME "Cifar100"
 
-// 三个不同深度的网络模型用来学习Cifar10和Cifar100数据集
+//声明引用ann-configuragion.c 的连个网络
 extern TPNeuralNet PNeuralNetCNN_Cifar10;
 extern TPNeuralNet PNeuralNetCNN_Cifar100;
-extern TPNeuralNet PNeuralNetCNN_16;
+
+//再声明两个学习网络，深度分别为9和16
+TPNeuralNet PNeuralNetCNN_9;
+TPNeuralNet PNeuralNetCNN_16;
 
 extern void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
 extern void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
@@ -45,19 +48,27 @@ int main()
 #endif
 	printf("version:1.0.0.0\n");
 	printf("////////////////////////////////////////////////////////////////////////////////////\n");
+
+	//一个4层简易网络用来学习Cifar10数据集
 	LOG("InitNeuralNet_CNN Cifar10...\n");
 	NeuralNetInit_Cifar10_11();
-	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar10);
-	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar10);
+	PNeuralNetCNN_9->trainning.data_type = Cifar10; //学习Cifar10数据集
 
-	LOG("\n");
-	LOG("InitNeuralNet_CNN Cifar100...\n");
+	//一个4层简易网络用来学习Cifar100数据集
+	LOG("\nInitNeuralNet_CNN Cifar100...\n");
 	NeuralNetInit_Cifar100();
-	NeuralNetInitLeaningParameter(PNeuralNetCNN_Cifar100);
-	NeuralNetPrintNetInformation(PNeuralNetCNN_Cifar100);
+	PNeuralNetCNN_9->trainning.data_type = Cifar100;  //学习Cifar100数据集
 
-	//一个深层网络用来学习Cifar100数据集，类似VGG16
-	PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("Cifar10");
+	//一个9层网络用来学习Cifar10数据集
+	LOG("\nNeuralNetInit_C_CNN_9...\n");
+	PNeuralNetCNN_9 = NeuralNetInit_C_CNN_9("Cifar10");
+	PNeuralNetCNN_9->trainning.data_type = Cifar10; //学习Cifar10数据集
+
+	//一个更深层网络用来学习Cifar100数据集，类似VGG16
+	LOG("\nNeuralNetInit_C_CNN_16...\n");
+	PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("C_CNN_16");
+	PNeuralNetCNN_9->trainning.data_type = Cifar100;  //学习Cifar100数据集
+
 	while (true)
 	{
 		printf("\033[%dB", log_lines);
@@ -85,6 +96,7 @@ int main()
 		printf("13: Save weights to   file cnn.w\n");
 		printf("14: Load weights from file cnn.w\n");
 		printf("15: Start trainning PNeuralNetCNN_16\n");
+		printf("16: Start trainning PNeuralNetCNN_16\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(cmd_str);
@@ -242,9 +254,19 @@ int main()
 			LOGINFOR("NeuralNet loading...");
 			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar10);
 			PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar100);
+			PNeuralNetCNN_9->loadWeights(PNeuralNetCNN_9);
 			PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
 			break;
 		case 15:
+			PNeuralNetCNN_9->trainning.trainingSaving = true;
+			PNeuralNetCNN_9->trainning.one_by_one = false;
+			PNeuralNetCNN_9->trainning.batch_by_batch = false;
+			PNeuralNetCNN_9->trainning.trainningGoing = true;
+			//PNeuralNetCNN_9->loadWeights(PNeuralNetCNN_9);
+			PNeuralNetCNN_9->trainning.randomFlip = false;
+			NeuralNetStartTrainning(PNeuralNetCNN_9);
+			break;
+		case 16:
 			PNeuralNetCNN_16->trainning.trainingSaving = true;
 			PNeuralNetCNN_16->trainning.one_by_one = false;
 			PNeuralNetCNN_16->trainning.batch_by_batch = false;
@@ -253,7 +275,10 @@ int main()
 			PNeuralNetCNN_16->trainning.randomFlip = false;
 			NeuralNetStartTrainning(PNeuralNetCNN_16);
 			break;
-		case 16:
+
+
+
+		case 20:
 			TPPicture pic = Dataset_GetTestingPic(net_layer, Cifar10);
 			TPVolume picv = pic->volume;
 			//TPVolume picv = LoadBmpFileToVolume("test_fruit_and_vegetables_apple_9.bmp");
@@ -264,14 +289,14 @@ int main()
 				SaveVolumeToBMP(picv, false, -1, 32, "test_32-flip.bmp");
 			}
 			break;
-		case 17:
+		case 21:
 			PrintBMP("test_airplane_airplane_3.bmp");
 			break;
-		case 18:
+		case 22:
 			CreateBMP("createBMP_24.bmp", 32, 32, 24);
 			CreateBMP("createBMP_32.bmp", 32, 32, 32);
 			break;
-		case 19:
+		case 23:
 			LOG("%f", GenerateRandomNumber());
 			break;
 		default:

@@ -128,6 +128,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\ann-configuration.c" />
     <ClCompile Include="..\ann-cnn.c" />
     <ClCompile Include="..\ann-trainer.c" />
     <ClCompile Include="..\ann-dataset.c" />
