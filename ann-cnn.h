@@ -438,7 +438,7 @@ DLLEXPORT void NeuralNetFree(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetForward(TPNeuralNet PNeuralNet, TPVolume PVolume);
 DLLEXPORT void NeuralNetBackward(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet);
-DLLEXPORT void NeuralNetComputeCostLoss(TPNeuralNet PNeuralNet);
+DLLEXPORT void NeuralNetComputeCostLoss(TPNeuralNet PNeuralNet, float32_t* CostLoss);
 DLLEXPORT void NeuralNetUpdatePrediction(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetSaveWeights(TPNeuralNet PNeuralNet);
 DLLEXPORT void NeuralNetLoadWeights(TPNeuralNet PNeuralNet);

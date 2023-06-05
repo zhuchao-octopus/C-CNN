@@ -38,5 +38,8 @@
     <ClInclude Include="..\ann-dataset.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\ann-configuration.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -136,6 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\ann-cnn.h" />
+    <ClInclude Include="..\ann-configuration.h" />
     <ClInclude Include="..\ann-dataset.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

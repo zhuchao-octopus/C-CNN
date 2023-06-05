@@ -2128,6 +2128,11 @@ void NeuralNetPrintLayersInfor(TPNeuralNet PNeuralNet)
 				pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNet->getName(pNetLayer->LayerType), ((TPConvLayer)pNetLayer)->filters->filterNumber,
 				((TPFullyConnLayer)pNetLayer)->filters->_w, ((TPFullyConnLayer)pNetLayer)->filters->_h, ((TPFullyConnLayer)pNetLayer)->filters->_depth);
 		}
+		else if (pNetLayer->LayerType == Layer_Type_SoftMax)
+		{
+			LOG("[NeuralNetLayerInfor[%02d,%02d]]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %s\n", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
+				pNetLayer->out_w, pNetLayer->out_h, pNetLayer->out_depth, PNeuralNet->getName(pNetLayer->LayerType));
+		}
 		else
 		{
 			LOG("[NeuralNetLayerInfor[%02d,%02d]]:in_w=%2d in_h=%2d in_depth=%2d out_w=%2d out_h=%2d out_depth=%2d %s\n", out_d, pNetLayer->LayerType, pNetLayer->in_w, pNetLayer->in_h, pNetLayer->in_depth,
@@ -2669,6 +2674,7 @@ int NeuralNetAddLayer(TPNeuralNet PNeuralNet, TLayerOption LayerOption)
 		LayerOption.out_h = 1;
 		LayerOption.out_w = 1;
 		LayerOption.out_depth = LayerOption.in_depth * LayerOption.in_w * LayerOption.in_h;
+		PNeuralNet->init(PNeuralNet, &LayerOption);
 		return LayerOption.LayerType;
 		break;
 	default:
