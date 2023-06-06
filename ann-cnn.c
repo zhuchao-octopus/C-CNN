@@ -16,11 +16,17 @@
 
 char* CNNTypeName[] = { "Input", "Convolution", "ReLu", "Pool", "FullyConnection", "SoftMax", "None" };
 
-void TestDSPFloatProcess(float32_t f1, float32_t f2)
+/////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
+// 产生高斯随机数
+// 生成高斯分布随机数序列数，期望为μ、方差为σ2=Variance
+// 若随机变量X服从一个数学期望为μ、方差为σ2的正态分布记为N(μ，σ2)
+// 其概率密度函数为正态分布的期望值μ决定了其位置，其标准差σ决定了分布的幅度
+// 当μ = 0,σ = 1时的正态分布是标准正态分布。
+
+float32_t NeuralNet_GetGaussRandom(double mul, float32_t Variance)
 {
-	// float32_t fv;
-	// fv = arm_sin_f32(3.1415926 / 7);
-	printf("hello got value %f %f\r\n", f1, f2);
+	return mul + GenerateGaussRandom2() * Variance;
 }
 
 time_t GetTimestamp(void)
@@ -131,18 +137,13 @@ double GenerateGaussRandom2(void)
 		return n2;
 	}
 }
-
-// 生成高斯分布随机数序列期望为μ、方差为σ2=Variance
-// 若随机变量X服从一个数学期望为μ、方差为σ2的正态分布记为N(μ，σ2)
-// 其概率密度函数为正态分布的期望值μ决定了其位置，其标准差σ决定了分布的幅度
-// 当μ = 0,σ = 1时的正态分布是标准正态分布。
-float32_t NeuralNet_GetGaussRandom(double mul, float32_t Variance)
-{
-	return mul + GenerateGaussRandom2() * Variance;
-}
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////
+/// <summary>
+/// 创建张量实体，为张量分配空间
+/// </summary>
+/// <param name="Length"></param>
+/// <returns></returns>
 TPTensor MakeTensor(uint32_t Length)
 {
 	TPTensor tPTensor = malloc(sizeof(TTensor));
@@ -155,7 +156,15 @@ TPTensor MakeTensor(uint32_t Length)
 	}
 	return tPTensor;
 }
-
+/////////////////////////////////////////////////////////////////////////////////////////////
+/// <summary>
+/// 初始化张量实体
+/// </summary>
+/// <param name="PTensor"></param>
+/// <param name="W"></param>
+/// <param name="H"></param>
+/// <param name="Depth"></param>
+/// <param name="Bias"></param>
 void TensorInit(TPTensor PTensor, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
 {
 	uint32_t n = W * H * Depth;
@@ -241,7 +250,13 @@ void TensorLoad(FILE* pFile, TPTensor PTensor)
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////
+/// <summary>
+/// 创建体积卷，为体积卷分配空间
+/// </summary>
+/// <param name="W"></param>
+/// <param name="H"></param>
+/// <param name="Depth"></param>
+/// <returns></returns>
 TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth)
 {
 	TPVolume tPVolume = malloc(sizeof(TVolume));
@@ -784,7 +799,7 @@ void DepthwisePointwiseConvolution(TPConvLayer PConvLayer)
 
 /// @brief ////////////////////////////////////////////////////////////////////////////////
 /// @param PConvLayer
-/// y = wx+b 求关于in w b的偏导数
+/// Y = WX + B 求关于X W B的偏导数
 void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 {
 	float32_t out_grad = 0.00;

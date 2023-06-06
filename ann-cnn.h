@@ -172,7 +172,6 @@ typedef struct ANN_CNN_Response
 
 typedef struct ANN_CNN_Prediction
 {
-	// char *lableName;
 	uint16_t labelIndex;
 	float32_t likeliHood;
 } TPrediction, * TPPrediction;
@@ -287,7 +286,6 @@ typedef struct ANN_CNN_PoolLayer
 typedef struct ANN_CNN_ReluLayer
 {
 	TLayer layer;
-	// TTensor tensor;
 	void (*init)(struct ANN_CNN_ReluLayer* PLayer, TPLayerOption PLayerOption);
 	void (*free)(struct ANN_CNN_ReluLayer* PLayer);
 	void (*forward)(struct ANN_CNN_ReluLayer* PLayer);
@@ -449,7 +447,6 @@ DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 /// @return
 DLLEXPORT void NeuralNetInit_Cifar10_11(void);
 
-void TestDSPFloatProcess(float32_t f1, float32_t f2);
 time_t GetTimestamp(void);
 
 #endif /* _INC_ANN_CNN_H_ */

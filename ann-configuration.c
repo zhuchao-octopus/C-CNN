@@ -570,9 +570,9 @@ TPNeuralNet NeuralNetInit_C_CNN_9(char* NetName)//总共20层，7个卷积层2个全连接层
 	LayerOption.l2_decay_rate = 1;
 	NeuralNetAddLayer(pNeuralNetCNN, LayerOption);
 
-	memset(&LayerOption, 0, sizeof(TLayerOption));
-	LayerOption.LayerType = Layer_Type_ReLu;
-	NeuralNetAddLayer(pNeuralNetCNN, LayerOption);
+	//memset(&LayerOption, 0, sizeof(TLayerOption));
+	//LayerOption.LayerType = Layer_Type_ReLu;
+	//NeuralNetAddLayer(pNeuralNetCNN, LayerOption);
 
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_FullyConnection;
@@ -584,9 +584,9 @@ TPNeuralNet NeuralNetInit_C_CNN_9(char* NetName)//总共20层，7个卷积层2个全连接层
 	LayerOption.l2_decay_rate = 1;
 	NeuralNetAddLayer(pNeuralNetCNN, LayerOption);
 
-	memset(&LayerOption, 0, sizeof(TLayerOption));
-	LayerOption.LayerType = Layer_Type_ReLu;
-	NeuralNetAddLayer(pNeuralNetCNN, LayerOption);
+	//memset(&LayerOption, 0, sizeof(TLayerOption));
+	//LayerOption.LayerType = Layer_Type_ReLu;
+	//NeuralNetAddLayer(pNeuralNetCNN, LayerOption);
 
 	memset(&LayerOption, 0, sizeof(TLayerOption));
 	LayerOption.LayerType = Layer_Type_SoftMax;
