@@ -278,7 +278,7 @@ int main()
 			PNeuralNetCNN_16->trainning.batch_by_batch = false;
 			PNeuralNetCNN_16->trainning.trainningGoing = true;
 			//PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
-			PNeuralNetCNN_16->trainning.randomFlip = false;
+			PNeuralNetCNN_16->trainning.randomFlip = true;
 			NeuralNetStartTrainning(PNeuralNetCNN_16);
 			break;
 

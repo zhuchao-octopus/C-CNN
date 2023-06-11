@@ -448,5 +448,7 @@ DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 DLLEXPORT void NeuralNetInit_Cifar10_11(void);
 
 time_t GetTimestamp(void);
-
+double GenerateGaussRandom(void);
+double GenerateGaussRandom1(void);
+double GenerateGaussRandom2(void);
 #endif /* _INC_ANN_CNN_H_ */
