@@ -5,7 +5,7 @@
  *  Created on: Mar 29, 2023
  *  Author: M
  */
-/////////////////////////////////////////////////////////////////////////////////////////////
+ /////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "ann-cnn.h"
 
@@ -14,7 +14,25 @@
 #include "octopus.h"
 #endif
 
+
 char* CNNTypeName[] = { "Input", "Convolution", "ReLu", "Pool", "FullyConnection", "SoftMax", "None" };
+
+#define RAN_RAND_MAX 2147483647
+#define RAN_RNOR_C   1.7155277699214135
+#define RAN_RNOR_R   (1.0 / RAN_RNOR_C)
+#define RAN_IEEE_1   4.656612877414201e-10
+#define RAN_IEEE_2   2.220446049250313e-16
+#define M_PI         3.14159265358979323846   // pi
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
+time_t GetTimestamp(void)
+{
+	time_t t = clock();
+	time_t tick = t * 1000 / CLOCKS_PER_SEC;
+	return tick;
+	// return time(NULL);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -24,26 +42,137 @@ char* CNNTypeName[] = { "Input", "Convolution", "ReLu", "Pool", "FullyConnection
 // 其概率密度函数为正态分布的期望值μ决定了其位置，其标准差σ决定了分布的幅度
 // 当μ = 0,σ = 1时的正态分布是标准正态分布。
 
-float32_t NeuralNet_GetGaussRandom(double mul, float32_t Variance)
+float32_t NeuralNet_GetGaussRandom(float32_t mul, float32_t Variance)
 {
 	return mul + GenerateGaussRandom2() * Variance;
 }
 
-time_t GetTimestamp(void)
-{
-	time_t t = clock();
-	time_t tick = t * 1000 / CLOCKS_PER_SEC;
-	return tick;
-	// return time(NULL);
+float32_t generateGaussianNoise_Box_Muller(float32_t mu, float32_t sigma) {
+	static const float32_t epsilon = DBL_MIN;
+	static const float32_t two_pi = 2.0 * M_PI;
+	static float32_t z0, z1;
+	static uint32_t generate;
+	generate = !generate;
+	if (!generate)
+		return z1 * sigma + mu;
+	float32_t u1, u2;
+	do {
+		u1 = rand() * (1.0 / RAND_MAX);
+		u2 = rand() * (1.0 / RAND_MAX);
+	} while (u1 <= epsilon);
+
+	float32_t sqrtVal = sqrt(-2.0 * log(u1));
+	z0 = sqrtVal * cos(two_pi * u2);
+	z1 = sqrtVal * sin(two_pi * u2);
+
+	return z0 * sigma + mu;
 }
-double GenerateRandomNumber()
+
+int sign(float32_t x) {
+	return (x >= 0) ? 1 : -1;
+}
+
+float32_t generateGaussianNoise_Ziggurat(float32_t mu, float32_t sigma) {
+	static uint32_t iu, iv;
+	static float32_t x, y, q;
+	static float32_t u[256], v[256];
+	static uint32_t init = 0;
+
+	if (!init) {
+		srand(time(NULL));
+
+		float32_t c, d, e;
+		float32_t f, g;
+		float32_t h;
+
+		c = RAN_RNOR_C;
+		d = fabs(c);
+
+		while (1) {
+			do {
+				x = 6.283185307179586476925286766559 * rand() / RAN_RAND_MAX;
+				y = 1.0 - RAN_IEEE_1 * (h = rand() / RAN_RAND_MAX);
+				q = h * exp(-0.5 * x * x);
+
+				if (q <= 0.2891349) {
+					e = h * ((((((((((((
+						-0.000200214257568 * h
+						+ 0.000100950558225) * h
+						+ 0.001349343676503) * h
+						- 0.003673428679726) * h
+						+ 0.005739507733706) * h
+						- 0.007622461300117) * h
+						+ 0.009438870047315) * h
+						+ 1.00167406037274) * h
+						+ 2.83297611084620) * h
+						+ 1.28067431755817) * h
+						+ 0.564189583547755) * h
+						+ 9.67580788298760e-1) * h
+						+ 1.0);
+					break;
+				}
+
+				if (q <= 0.67780119) {
+					e = h * (((((((((((((((((
+						-0.000814322055558 * h
+						+ 0.00027344107956) * h
+						+ 0.00134049846717) * h
+						- 0.00294315816186) * h
+						+ 0.00481439291198) * h
+						- 0.00653236492407) * h
+						+ 0.00812419176390) * h
+						- 0.01003558218763) * h
+						+ 0.01196480954895) * h
+						- 0.01443119616267) * h
+						+ 0.01752937625694) * h
+						- 0.02166037955289) * h
+						+ 1.00393389947532) * h
+						+ 2.96952232392818) * h
+						+ 1.28067430575358) * h
+						+ 0.56418958354775) * h
+						+ 9.67580788298599e-1) * h
+						+ 1.0);
+					break;
+				}
+
+				if (x * x + log(h) / d <= -2.0 * log(x)) {
+					e = h;
+					break;
+				}
+			} while (y > q);
+
+			f = (x >= 0.0) ? d + x : -d - x;
+			g = exp(0.5 * f * f);
+			u[init] = f * g;
+			v[init] = g * g;
+
+			init++;
+			if (init >= 256)
+				break;
+		}
+	}
+
+	init--;
+	if (init < 0)
+		init = 255;
+
+	x = u[init];
+	y = v[init];
+	q = (init > 0) ? v[init - 1] : v[255];
+
+	float32_t result = RAN_RNOR_R * x / q;
+
+	return sigma * result + mu;
+}
+
+float32_t GenerateRandomNumber()
 {
 	// 设置随机数种子
 	//srand(time(NULL));
 	// 生成0到RAND_MAX之间的随机整数
-	int randInt = rand();
+	uint32_t randInt = rand();
 	// 将随机整数映射到-1到1之间的浮点数范围
-	double randFloat = (double)randInt / RAND_MAX; // 将整数归一化到0到1之间
+	float32_t randFloat = (float32_t)randInt / RAND_MAX; // 将整数归一化到0到1之间
 	// double randomNum = (randFloat * 2.0) - 1.0;     // 将范围映射到-1到1之间
 	return randFloat;
 }
@@ -84,7 +213,7 @@ float32_t GenerateGaussRandom(void)
 float32_t GenerateGaussRandom1(void)
 {
 	static float32_t v1, v2, s;
-	static int start = 0;
+	static uint32_t start = 0;
 	float32_t x;
 	if (start == 0)
 	{
@@ -107,14 +236,14 @@ float32_t GenerateGaussRandom1(void)
 	return x;
 }
 
-double GenerateGaussRandom2(void)
+float32_t GenerateGaussRandom2(void)
 {
-	static double n2 = 0.0;
-	static int n2_cached = 0;
-	double d;
+	static float32_t n2 = 0.0;
+	static uint32_t n2_cached = 0;
+	float32_t d;
 	if (!n2_cached)
 	{
-		double x, y, r;
+		float32_t x, y, r;
 		do
 		{
 			x = 2.0 * rand() / RAND_MAX - 1;
@@ -126,7 +255,7 @@ double GenerateGaussRandom2(void)
 #else
 		d = sqrt(-2.0 * log(r) / r);
 #endif
-		double n1 = x * d;
+		float32_t n1 = x * d;
 		n2 = y * d;
 		n2_cached = 1;
 		return n1;
@@ -288,11 +417,11 @@ void VolumeInit(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float3
 	PVolume->_depth = Depth;
 	uint32_t n = PVolume->_w * PVolume->_h * PVolume->_depth;
 	PVolume->weight = MakeTensor(n);
-	PVolume->weight_d = MakeTensor(n);
+	PVolume->grads = MakeTensor(n);
 	// TensorFillZero(PVolume->weight);
 	// TensorFillZero(PVolume->weight_grad);
 	TensorFillWith(PVolume->weight, Bias);
-	TensorFillWith(PVolume->weight_d, Bias);
+	TensorFillWith(PVolume->grads, Bias);
 }
 
 void VolumeFree(TPVolume PVolume)
@@ -300,7 +429,7 @@ void VolumeFree(TPVolume PVolume)
 	if (PVolume != NULL)
 	{
 		TensorFree(PVolume->weight);
-		TensorFree(PVolume->weight_d);
+		TensorFree(PVolume->grads);
 		free(PVolume);
 	}
 	PVolume = NULL;
@@ -327,20 +456,21 @@ float32_t VolumeGetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Dept
 void VolumeSetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
 {
 	uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-	PVolume->weight_d->buffer[index] = Value;
+	PVolume->grads->buffer[index] = Value;
 }
 
 void VolumeAddGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
 {
 	uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-	PVolume->weight_d->buffer[index] = PVolume->weight_d->buffer[index] + Value;
+	PVolume->grads->buffer[index] = PVolume->grads->buffer[index] + Value;
 }
 
 float32_t VolumeGetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth)
 {
 	uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-	return PVolume->weight_d->buffer[index];
+	return PVolume->grads->buffer[index];
 }
+
 void VolumeFlip(TPVolume PVolume)
 {
 	uint16_t width = PVolume->_w;
@@ -629,6 +759,8 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
 }
 /// @brief //////////////////////////////////////////////////////////////////////////
 /// @param PConvLayer
+/// 单通道多卷积核卷积运算
+/// 多通道卷积
 void ConvolutionLayerForward(TPConvLayer PConvLayer)
 {
 	uint16_t padding_x = -PConvLayer->padding;
@@ -664,7 +796,7 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
 
 						uint32_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
 						uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
-						for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
+						for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)//多通道卷积
 						{
 							// sum = sum + filter->getValue(filter, filter_x, filter_y, filter_d) * inVolume->getValue(inVolume, in_x, in_y, filter_d);
 							sum = sum + filter->weight->buffer[fx + filter_d] * inVolume->weight->buffer[ix + filter_d];
@@ -808,7 +940,7 @@ void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 	uint16_t in_x, in_y;
 	TPVolume inVolume = PConvLayer->layer.in_v;
 	TPVolume outVolume = PConvLayer->layer.out_v;
-	inVolume->fillZero(inVolume->weight_d);
+	inVolume->fillZero(inVolume->grads);
 
 	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
 	{
@@ -821,7 +953,6 @@ void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 			for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
 			{
 				out_grad = outVolume->getGradValue(outVolume, out_x, out_y, out_d);
-				// assert(!IsFloatUnderflow(out_grad));
 				for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
 				{
 					in_y = filter_y + padding_y;
@@ -838,12 +969,12 @@ void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 						uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
 						for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
 						{
-							filter->weight_d->buffer[fx + filter_d] = filter->weight_d->buffer[fx + filter_d] + inVolume->weight->buffer[ix + filter_d] * out_grad;
-							inVolume->weight_d->buffer[ix + filter_d] = inVolume->weight_d->buffer[ix + filter_d] + filter->weight->buffer[fx + filter_d] * out_grad;
+							filter->grads->buffer[fx + filter_d] = filter->grads->buffer[fx + filter_d] + inVolume->weight->buffer[ix + filter_d] * out_grad;
+							inVolume->grads->buffer[ix + filter_d] = inVolume->grads->buffer[ix + filter_d] + filter->weight->buffer[fx + filter_d] * out_grad;
 						}
 					}
 				}
-				PConvLayer->biases->weight_d->buffer[out_d] = PConvLayer->biases->weight_d->buffer[out_d] + out_grad;
+				PConvLayer->biases->grads->buffer[out_d] = PConvLayer->biases->grads->buffer[out_d] + out_grad;
 				padding_x = padding_x + PConvLayer->stride;
 			}
 			padding_y = padding_y + PConvLayer->stride;
@@ -851,20 +982,20 @@ void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 	}
 }
 
-TPResponse* ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
+TPParameters* ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 {
 	if (PConvLayer->layer.out_depth <= 0)
 		return NULL;
-	TPResponse* tPResponses = malloc(sizeof(TPResponse) * (PConvLayer->layer.out_depth + 1));
+	TPParameters* tPResponses = malloc(sizeof(TPParameters) * (PConvLayer->layer.out_depth + 1));
 	if (tPResponses == NULL)
 		return NULL;
 	for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
 	{
-		TPResponse PResponse = malloc(sizeof(TResponse));
+		TPParameters PResponse = malloc(sizeof(TParameters));
 		if (PResponse != NULL)
 		{
 			PResponse->filterWeight = PConvLayer->filters->volumes[out_d]->weight;
-			PResponse->filterGrads = PConvLayer->filters->volumes[out_d]->weight_d;
+			PResponse->filterGrads = PConvLayer->filters->volumes[out_d]->grads;
 			PResponse->l1_decay_rate = PConvLayer->l1_decay_rate;
 			PResponse->l2_decay_rate = PConvLayer->l2_decay_rate;
 			PResponse->fillZero = TensorFillZero;
@@ -873,11 +1004,11 @@ TPResponse* ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 		}
 	}
 
-	TPResponse PResponse = malloc(sizeof(TResponse));
+	TPParameters PResponse = malloc(sizeof(TParameters));
 	if (PResponse != NULL)
 	{
 		PResponse->filterWeight = PConvLayer->biases->weight;
-		PResponse->filterGrads = PConvLayer->biases->weight_d;
+		PResponse->filterGrads = PConvLayer->biases->grads;
 		PResponse->l1_decay_rate = 0;
 		PResponse->l2_decay_rate = 0;
 		PResponse->fillZero = TensorFillZero;
@@ -976,9 +1107,9 @@ void ReluLayerBackward(TPReluLayer PReluLayer)
 	for (uint32_t out_l = 0; out_l < PReluLayer->layer.in_v->weight->length; out_l++)
 	{
 		if (PReluLayer->layer.out_v->weight->buffer[out_l] <= 0)
-			PReluLayer->layer.in_v->weight_d->buffer[out_l] = 0;
+			PReluLayer->layer.in_v->grads->buffer[out_l] = 0;
 		else
-			PReluLayer->layer.in_v->weight_d->buffer[out_l] = PReluLayer->layer.out_v->weight_d->buffer[out_l];
+			PReluLayer->layer.in_v->grads->buffer[out_l] = PReluLayer->layer.out_v->grads->buffer[out_l];
 	}
 }
 
@@ -1024,8 +1155,8 @@ void PoolLayerInit(TPPoolLayer PPoolLayer, TPLayerOption PLayerOption)
 	PPoolLayer->switchxy->init(PPoolLayer->switchxy, PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, 0);
 	// PPoolLayer->switchy = MakeVolume(PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth);
 	// PPoolLayer->switchy->init(PPoolLayer->switchy, PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, 0);
-	// PPoolLayer->switchy->free(PPoolLayer->switchy->weight_d);
-	// PPoolLayer->switchx->free(PPoolLayer->switchx->weight_d);
+	// PPoolLayer->switchy->free(PPoolLayer->switchy->grads);
+	// PPoolLayer->switchx->free(PPoolLayer->switchx->grads);
 	// uint16_t out_length = PPoolLayer->layer.out_w * PPoolLayer->layer.out_h * PPoolLayer->layer.out_depth;
 	// PPoolLayer->switchx = MakeTensor(out_length);
 	// PPoolLayer->switchy = MakeTensor(out_length);
@@ -1058,8 +1189,8 @@ void poolLayerOutResize(TPPoolLayer PPoolLayer)
 		PPoolLayer->switchxy->init(PPoolLayer->switchxy, PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, 0);
 		// PPoolLayer->switchy = MakeVolume(PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth);
 		// PPoolLayer->switchy->init(PPoolLayer->switchy, PPoolLayer->layer.out_w, PPoolLayer->layer.out_h, PPoolLayer->layer.out_depth, 0);
-		// PPoolLayer->switchy->free(PPoolLayer->switchy->weight_d);
-		// PPoolLayer->switchx->free(PPoolLayer->switchx->weight_d);
+		// PPoolLayer->switchy->free(PPoolLayer->switchy->grads);
+		// PPoolLayer->switchx->free(PPoolLayer->switchx->grads);
 	}
 }
 
@@ -1125,7 +1256,7 @@ void PoolLayerBackward(TPPoolLayer PPoolLayer)
 	float32_t grad_value = 0.00;
 	TPVolume inVolu = PPoolLayer->layer.in_v;
 	TPVolume outVolu = PPoolLayer->layer.out_v;
-	inVolu->fillZero(inVolu->weight_d);
+	inVolu->fillZero(inVolu->grads);
 	uint32_t x, y;
 	for (uint32_t out_d = 0; out_d < PPoolLayer->layer.out_depth; out_d++)
 	{
@@ -1263,21 +1394,21 @@ void FullyConnLayerBackward(TPFullyConnLayer PFullyConnLayer)
 	float32_t grad_value = 0.00;
 	TPVolume inVolu = PFullyConnLayer->layer.in_v;
 	TPVolume outVolu = PFullyConnLayer->layer.out_v;
-	inVolu->fillZero(inVolu->weight_d);
+	inVolu->fillZero(inVolu->grads);
 
 	for (uint32_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
 	{
 		TPVolume filter = PFullyConnLayer->filters->volumes[out_d];
-		grad_value = outVolu->weight_d->buffer[out_d];
+		grad_value = outVolu->grads->buffer[out_d];
 
 		uint32_t inputPoints = inVolu->_w * inVolu->_h * inVolu->_depth;
 
 		for (uint32_t out_l = 0; out_l < inputPoints; out_l++)
 		{
-			inVolu->weight_d->buffer[out_l] = inVolu->weight_d->buffer[out_l] + filter->weight->buffer[out_l] * grad_value;
-			filter->weight_d->buffer[out_l] = filter->weight_d->buffer[out_l] + inVolu->weight->buffer[out_l] * grad_value;
+			inVolu->grads->buffer[out_l] = inVolu->grads->buffer[out_l] + filter->weight->buffer[out_l] * grad_value;
+			filter->grads->buffer[out_l] = filter->grads->buffer[out_l] + inVolu->weight->buffer[out_l] * grad_value;
 		}
-		PFullyConnLayer->biases->weight_d->buffer[out_d] = PFullyConnLayer->biases->weight_d->buffer[out_d] * grad_value;
+		PFullyConnLayer->biases->grads->buffer[out_d] = PFullyConnLayer->biases->grads->buffer[out_d] * grad_value;
 	}
 }
 
@@ -1286,20 +1417,20 @@ float32_t FullyConnLayerBackwardLoss(TPFullyConnLayer PFullyConnLayer, int Y)
 	return 0.00;
 }
 
-TPResponse* FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
+TPParameters* FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 {
 	if (PFullyConnLayer->layer.out_depth <= 0)
 		return NULL;
-	TPResponse* tPResponses = malloc(sizeof(TPResponse) * (PFullyConnLayer->layer.out_depth + 1));
+	TPParameters* tPResponses = malloc(sizeof(TPParameters) * (PFullyConnLayer->layer.out_depth + 1));
 	if (tPResponses == NULL)
 		return NULL;
 	for (uint32_t out_d = 0; out_d < PFullyConnLayer->layer.out_depth; out_d++)
 	{
-		TPResponse PResponse = malloc(sizeof(TResponse));
+		TPParameters PResponse = malloc(sizeof(TParameters));
 		if (PResponse != NULL)
 		{
 			PResponse->filterWeight = PFullyConnLayer->filters->volumes[out_d]->weight;
-			PResponse->filterGrads = PFullyConnLayer->filters->volumes[out_d]->weight_d;
+			PResponse->filterGrads = PFullyConnLayer->filters->volumes[out_d]->grads;
 			PResponse->l1_decay_rate = PFullyConnLayer->l1_decay_rate;
 			PResponse->l2_decay_rate = PFullyConnLayer->l2_decay_rate;
 			PResponse->fillZero = TensorFillZero;
@@ -1307,11 +1438,11 @@ TPResponse* FullyConnLayerGetParamsAndGrads(TPFullyConnLayer PFullyConnLayer)
 			tPResponses[out_d] = PResponse;
 		}
 	}
-	TPResponse PResponse = malloc(sizeof(TResponse));
+	TPParameters PResponse = malloc(sizeof(TParameters));
 	if (PResponse != NULL)
 	{
 		PResponse->filterWeight = PFullyConnLayer->biases->weight;
-		PResponse->filterGrads = PFullyConnLayer->biases->weight_d;
+		PResponse->filterGrads = PFullyConnLayer->biases->grads;
 		PResponse->l1_decay_rate = 0;
 		PResponse->l2_decay_rate = 0;
 		PResponse->fillZero = TensorFillZero;
@@ -1424,7 +1555,7 @@ void SoftmaxLayerBackward(TPSoftmaxLayer PSoftmaxLayer)
 {
 	TPVolume inVolu = PSoftmaxLayer->layer.in_v;
 	TPVolume outVolu = PSoftmaxLayer->layer.out_v;
-	inVolu->fillZero(outVolu->weight_d);
+	inVolu->fillZero(outVolu->grads);
 	float32_t dw; // 计算 delta weight
 	for (uint32_t out_d = 0; out_d < PSoftmaxLayer->layer.out_depth; out_d++)
 	{
@@ -1433,8 +1564,14 @@ void SoftmaxLayerBackward(TPSoftmaxLayer PSoftmaxLayer)
 		else
 			dw = PSoftmaxLayer->exp->buffer[out_d];
 
-		inVolu->weight_d->buffer[out_d] = dw;
+		inVolu->grads->buffer[out_d] = dw;
 	}
+
+	//float32_t exp = PSoftmaxLayer->exp->buffer[PSoftmaxLayer->expected_value];
+	//float32_t loss = 0;
+	//if (exp > 0)
+	//	loss = -log10(exp);
+	
 }
 /// @brief ////////////////////////////////////////////////////////////////////////////
 /// @param PSoftmaxLayer
@@ -1773,7 +1910,7 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 		PNeuralNet->trainning.pResponseResults = NULL;
 	}
 	if (PNeuralNet->trainning.pResponseResults == NULL)
-		temp = malloc(sizeof(TPResponse));
+		temp = malloc(sizeof(TPParameters));
 
 	for (uint16_t layerIndex = 1; layerIndex < PNeuralNet->depth; layerIndex++)
 	{
@@ -1787,10 +1924,10 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 
 		case Layer_Type_Convolution:
 		{
-			TPResponse* pResponseResult = ((TPConvLayer)PNeuralNet->layers[layerIndex])->getWeightsAndGrads(((TPConvLayer)PNeuralNet->layers[layerIndex]));
+			TPParameters* pResponseResult = ((TPConvLayer)PNeuralNet->layers[layerIndex])->getWeightsAndGrads(((TPConvLayer)PNeuralNet->layers[layerIndex]));
 			for (uint16_t i = 0; i <= ((TPConvLayer)PNeuralNet->layers[layerIndex])->layer.out_depth; i++)
 			{
-				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPResponse) * (PNeuralNet->trainning.responseCount + 1));
+				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPParameters) * (PNeuralNet->trainning.responseCount + 1));
 				if (temp != NULL)
 				{
 #if 0
@@ -1843,10 +1980,10 @@ void NeuralNetGetWeightsAndGrads(TPNeuralNet PNeuralNet)
 
 		case Layer_Type_FullyConnection:
 		{
-			TPResponse* pResponseResult = ((TPFullyConnLayer)PNeuralNet->layers[layerIndex])->getWeightsAndGrads(((TPFullyConnLayer)PNeuralNet->layers[layerIndex]));
+			TPParameters* pResponseResult = ((TPFullyConnLayer)PNeuralNet->layers[layerIndex])->getWeightsAndGrads(((TPFullyConnLayer)PNeuralNet->layers[layerIndex]));
 			for (uint16_t i = 0; i <= ((TPConvLayer)PNeuralNet->layers[layerIndex])->layer.out_depth; i++)
 			{
-				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPResponse) * (PNeuralNet->trainning.responseCount + 1));
+				temp = realloc(PNeuralNet->trainning.pResponseResults, sizeof(TPParameters) * (PNeuralNet->trainning.responseCount + 1));
 				if (temp != NULL)
 				{
 #if 0
@@ -2217,8 +2354,8 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 	TPTensor weight, grads;
 	TPTensor accum_grads1; // 累计历史梯度
 	TPTensor accum_grads2; // for Optm_Adadelta
-	TPResponse* pResponseResults = NULL;
-	TPResponse pResponse = NULL;
+	TPParameters* pResponseResults = NULL;
+	TPParameters pResponse = NULL;
 
 	float32_t l1_decay = 0.00;
 	float32_t l2_decay = 0.00;
@@ -2329,8 +2466,10 @@ void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume)
 		{
 			l1_decay_loss = l1_decay_loss + l1_decay * abs(weight->buffer[j]);
 			l2_decay_loss = l2_decay_loss + l2_decay * weight->buffer[j] * weight->buffer[j] / 2;
+
 			l1_decay_grad = (weight->buffer[j] > 0) ? l1_decay : -l1_decay;
 			l2_decay_grad = l2_decay * weight->buffer[j]; // 函数 y = ax^2 的导数是 dy/dx = 2ax
+
 			gradij = (grads->buffer[j] + l1_decay_grad + l2_decay_grad) / PNeuralNet->trainningParam.batch_size;
 
 			switch (PNeuralNet->trainningParam.optimize_method)
@@ -2389,6 +2528,7 @@ void NeuralNetSaveWeights(TPNeuralNet PNeuralNet)
 	char* name = NULL;
 	if (PNeuralNet == NULL)
 		return;
+
 	if (PNeuralNet->name != NULL)
 	{
 		name = (char*)malloc(strlen(PNeuralNet->name) + strlen(NEURALNET_CNN_WEIGHT_FILE_NAME) + 3);
@@ -2399,6 +2539,7 @@ void NeuralNetSaveWeights(TPNeuralNet PNeuralNet)
 	{
 		pFile = fopen(NEURALNET_CNN_WEIGHT_FILE_NAME, "wb");
 	}
+
 	if (pFile != NULL)
 	{
 		for (uint16_t layerIndex = 0; layerIndex < PNeuralNet->depth; layerIndex++)
@@ -2585,6 +2726,8 @@ TPNeuralNet NeuralNetCNNCreate(char* name)
 	PNeuralNet->printNetLayersInfor = NeuralNetPrintLayersInfor;
 	PNeuralNet->printTensor = NeuralNetPrint;
 	PNeuralNet->getName = NeuralNetGetLayerName;
+
+	return PNeuralNet;
 }
 
 char* NeuralNetGetLayerName(TLayerType LayerType)

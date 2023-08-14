@@ -36,7 +36,7 @@ TLayerOption LayerOption = { Layer_Type_None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 /////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief /////////////////////////////////////////////////////////////////////////////////
 /// @param ÍøÂçÊ¾Àı1
-void NeuralNetInit_Cifar10_11(void)//×Ü¹²11²ãÍøÂç£¬º¬ËÄ¸öÈ¨ÖØ²ã£¬Èı¸ö¾í»ıÒ»¸öÈ«Á¬½Ó
+void NeuralNetCreateAndInit_Cifar10(void)//×Ü¹²11²ãÍøÂç£¬º¬ËÄ¸öÈ¨ÖØ²ã£¬Èı¸ö¾í»ıÒ»¸öÈ«Á¬½Ó
 {
 	TPLayer pNetLayer;
 	if (PNeuralNetCNN_Cifar10 != NULL)
@@ -231,7 +231,7 @@ void NeuralNetInit_Cifar10_11(void)//×Ü¹²11²ãÍøÂç£¬º¬ËÄ¸öÈ¨ÖØ²ã£¬Èı¸ö¾í»ıÒ»¸öÈ«Á
 
 /// @brief ///////////////////////////////////////////////////////
 /// @param ÍøÂçÊ¾Àı2
-void NeuralNetInit_Cifar100(void)//×Ü¹²11²ãÍøÂç£¬º¬ËÄ¸öÈ¨ÖØ²ã£¬Èı¸ö¾í»ıÒ»¸öÈ«Á¬½Ó
+void NeuralNetCreateAndInit_Cifar100(void)//×Ü¹²11²ãÍøÂç£¬º¬ËÄ¸öÈ¨ÖØ²ã£¬Èı¸ö¾í»ıÒ»¸öÈ«Á¬½Ó
 {
 	TPLayer pNetLayer;
 	if (PNeuralNetCNN_Cifar100 != NULL)

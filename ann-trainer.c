@@ -46,7 +46,7 @@ void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN)
 	}
 	elapsed_time_ms = GetTimestamp();
 	PNeuralNetCNN->trainning.trainningGoing = true;
-	srand(time(NULL));
+	
 	while (PNeuralNetCNN->trainning.trainningGoing)
 	{
 		pTrainningImage = (TPPicture)Dataset_GetTrainningPic(PNeuralNetCNN->trainning.trinning_dataset_index, PNeuralNetCNN->trainning.data_type);
@@ -284,7 +284,8 @@ void PrintTrainningInfor(TPNeuralNet PNeuralNetCNN)
     #define FORMATF = "%9.6f\n"
 
 	#if 1
-	if (strcmp(PNeuralNetCNN->name, "Cifar10") == 0 && PNeuralNetCNN->trainning.sampleCount > 0)
+	///if (strcmp(PNeuralNetCNN->name, "Cifar10") == 0 && PNeuralNetCNN->trainning.sampleCount > 0)
+	if (strstr(PNeuralNetCNN->name, "Cifar10") && PNeuralNetCNN->trainning.sampleCount > 0)
 	{
 		LOGINFO("NeuralNetName   :%s  ", PNeuralNetCNN->name);
 		LOGINFO("DatasetTotal    :%09d  ", PNeuralNetCNN->trainning.datasetTotal);
@@ -313,7 +314,8 @@ void PrintTrainningInfor(TPNeuralNet PNeuralNetCNN)
 		// if (PNeuralNetCNN_Cifar10->trainning.batchCount > 1 || PNeuralNetCNN_Cifar100->trainning.batchCount > 1)
 		printf("\033[19A");
 	}
-	if (strcmp(PNeuralNetCNN->name, "Cifar100") == 0 && PNeuralNetCNN->trainning.sampleCount > 0)
+	///if (strcmp(PNeuralNetCNN->name, "Cifar100") == 0 && PNeuralNetCNN->trainning.sampleCount > 0)
+	if (strstr(PNeuralNetCNN->name, "Cifar100") && PNeuralNetCNN->trainning.sampleCount > 0)
 	{
 		LOGINFO("NeuralNetName   :\t\t%06s", PNeuralNetCNN->name);
 		LOGINFO("DatasetTotal    :\t\t%06d", PNeuralNetCNN->trainning.datasetTotal);

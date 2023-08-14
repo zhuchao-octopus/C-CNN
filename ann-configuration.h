@@ -10,10 +10,12 @@
 #ifndef _INC_ANN_CONFIGURATION_H_
 #define _INC_ANN_CONFIGURATION_H_
 
-
+void NeuralNetCreateAndInit_Cifar10(void);
+void NeuralNetCreateAndInit_Cifar100(void);
 
 TPNeuralNet NeuralNetInit_C_CNN_16(char* NetName);
 TPNeuralNet NeuralNetInit_C_CNN_9(char* NetName);
+
 
 #endif
 

@@ -27,9 +27,9 @@ extern TPNeuralNet PNeuralNetCNN_Cifar100;
 TPNeuralNet PNeuralNetCNN_9;
 TPNeuralNet PNeuralNetCNN_16;
 
-extern void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
-extern void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
-extern void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
+//void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
+//void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
+//void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
 
 
 void showBanner(void);
@@ -50,22 +50,23 @@ int main()
 #endif
 	printf("version:1.0.0.0\n");
 	printf("////////////////////////////////////////////////////////////////////////////////////\n");
-
+	// 设置随机数种子
+	srand(time(NULL));
 	//一个4层简易网络用来学习Cifar10数据集
 	LOG("InitNeuralNet_CNN Cifar10...\n");
-	NeuralNetInit_Cifar10_11();
+	NeuralNetCreateAndInit_Cifar10();
 	PNeuralNetCNN_Cifar10->trainning.data_type = Cifar10; //学习Cifar10数据集
 	
 	//一个4层简易网络用来学习Cifar100数据集
 	printf("\n");
 	LOG("\nInitNeuralNet_CNN Cifar100...\n");
-	NeuralNetInit_Cifar100();
+	NeuralNetCreateAndInit_Cifar100();
 	PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;  //学习Cifar100数据集
 	
 	//一个9层网络用来学习Cifar10数据集
 	printf("\n");
 	LOG("\nNeuralNetInit_C_CNN_9...\n");
-	PNeuralNetCNN_9 = NeuralNetInit_C_CNN_9("Cifar10");
+	PNeuralNetCNN_9 = NeuralNetInit_C_CNN_9("C_CNN_9_Cifar10");
 	PNeuralNetCNN_9->trainning.data_type = Cifar10; //学习Cifar10数据集
 
 	
@@ -102,7 +103,7 @@ int main()
 		printf("13: Save weights to   file cnn.w\n");
 		printf("14: Load weights from file cnn.w\n");
 		printf("15: Start trainning PNeuralNetCNN_9\n");
-		printf("16: Start trainning PNeuralNetCNN_16\n");
+		//printf("16: Start trainning PNeuralNetCNN_16\n");
 		printf("\nplease select a menu item to continue:");
 
 		gets(cmd_str);
@@ -277,7 +278,7 @@ int main()
 			PNeuralNetCNN_16->trainning.one_by_one = false;
 			PNeuralNetCNN_16->trainning.batch_by_batch = false;
 			PNeuralNetCNN_16->trainning.trainningGoing = true;
-			//PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
+			PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
 			PNeuralNetCNN_16->trainning.randomFlip = true;
 			NeuralNetStartTrainning(PNeuralNetCNN_16);
 			break;

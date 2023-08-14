@@ -414,7 +414,7 @@ void SaveVolumeToBMP(TPVolume PVolume, bool_t Grads, uint16_t Depth, uint16_t bi
     fseek(pFile, fileHeader.bfOffBits, SEEK_SET);
 
     if (Grads)
-        pMaxMin = TensorMaxMin(PVolume->weight_d);
+        pMaxMin = TensorMaxMin(PVolume->grads);
     else
         pMaxMin = TensorMaxMin(PVolume->weight);
     // 将像素数据转换为Volume中的权重和梯度张量数据

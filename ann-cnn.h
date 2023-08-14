@@ -160,7 +160,7 @@ typedef struct ANN_CNN_Tensor
 	uint32_t length;
 } TTensor, * TPTensor;
 
-typedef struct ANN_CNN_Response
+typedef struct ANN_CNN_Parameter
 {
 	TPTensor filterWeight;
 	TPTensor filterGrads;
@@ -168,7 +168,7 @@ typedef struct ANN_CNN_Response
 	float32_t l1_decay_rate;
 	void (*fillZero)(TPTensor PTensor);
 	void (*free)(TPTensor PTensor);
-} TResponse, * TPResponse;
+} TParameters, * TPParameters;
 
 typedef struct ANN_CNN_Prediction
 {
@@ -180,7 +180,7 @@ typedef struct ANN_CNN_Volume
 {
 	uint16_t _w, _h, _depth;
 	TPTensor weight;
-	TPTensor weight_d;
+	TPTensor grads;
 	void (*init)(struct ANN_CNN_Volume* PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias);
 	void (*setValue)(struct ANN_CNN_Volume* PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
 	void (*addValue)(struct ANN_CNN_Volume* PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value);
@@ -265,7 +265,7 @@ typedef struct ANN_CNN_ConvolutionLayer
 	void (*forward)(struct ANN_CNN_ConvolutionLayer* PLayer);
 	void (*backward)(struct ANN_CNN_ConvolutionLayer* PLayer);
 	float32_t(*computeLoss)(struct ANN_CNN_ConvolutionLayer* PLayer, int Y);
-	TPResponse* (*getWeightsAndGrads)(struct ANN_CNN_ConvolutionLayer* PConvLayer);
+	TPParameters* (*getWeightsAndGrads)(struct ANN_CNN_ConvolutionLayer* PConvLayer);
 } TConvLayer, * TPConvLayer;
 
 typedef struct ANN_CNN_PoolLayer
@@ -280,7 +280,7 @@ typedef struct ANN_CNN_PoolLayer
 	void (*forward)(struct ANN_CNN_PoolLayer* PLayer);
 	void (*backward)(struct ANN_CNN_PoolLayer* PLayer);
 	float32_t(*computeLoss)(struct ANN_CNN_PoolLayer* PLayer, int Y);
-	TPResponse* (*getWeightsAndGrads)(struct ANN_CNN_PoolLayer* PPoolLayer);
+	TPParameters* (*getWeightsAndGrads)(struct ANN_CNN_PoolLayer* PPoolLayer);
 } TPoolLayer, * TPPoolLayer;
 
 typedef struct ANN_CNN_ReluLayer
@@ -291,7 +291,7 @@ typedef struct ANN_CNN_ReluLayer
 	void (*forward)(struct ANN_CNN_ReluLayer* PLayer);
 	void (*backward)(struct ANN_CNN_ReluLayer* PLayer);
 	float32_t(*computeLoss)(struct ANN_CNN_ReluLayer* PLayer, int Y);
-	TPResponse* (*getWeightsAndGrads)(struct ANN_CNN_ReluLayer* PReluLayer);
+	TPParameters* (*getWeightsAndGrads)(struct ANN_CNN_ReluLayer* PReluLayer);
 } TReluLayer, * TPReluLayer;
 
 typedef struct ANN_CNN_FullyConnectedLayer //FullyConnectedLayer
@@ -307,7 +307,7 @@ typedef struct ANN_CNN_FullyConnectedLayer //FullyConnectedLayer
 	void (*forward)(struct ANN_CNN_FullyConnectedLayer* PLayer);
 	void (*backward)(struct ANN_CNN_FullyConnectedLayer* PLayer);
 	float32_t(*computeLoss)(struct ANN_CNN_FullyConnectedLayer* PLayer, int Y);
-	TPResponse* (*getWeightsAndGrads)(struct ANN_CNN_FullyConnectedLayer* PFullyConnLayer);
+	TPParameters* (*getWeightsAndGrads)(struct ANN_CNN_FullyConnectedLayer* PFullyConnLayer);
 } TFullyConnLayer, * TPFullyConnLayer;
 
 typedef struct ANN_CNN_SoftmaxLayer
@@ -320,7 +320,7 @@ typedef struct ANN_CNN_SoftmaxLayer
 	void (*forward)(struct ANN_CNN_SoftmaxLayer* PLayer);
 	void (*backward)(struct ANN_CNN_SoftmaxLayer* PLayer);
 	float32_t(*computeLoss)(struct ANN_CNN_SoftmaxLayer* PLayer);
-	TPResponse* (*getWeightsAndGrads)(struct ANN_CNN_SoftmaxLayer* PSoftmaxLayer);
+	TPParameters* (*getWeightsAndGrads)(struct ANN_CNN_SoftmaxLayer* PSoftmaxLayer);
 } TSoftmaxLayer, * TPSoftmaxLayer;
 
 typedef struct ANN_CNN_LearningParameter
@@ -357,7 +357,7 @@ typedef struct ANN_CNN_Learning
 	uint32_t testing_dataset_index;
 
 	uint16_t responseCount;
-	TPResponse* pResponseResults;
+	TPParameters* pResponseResults;
 	uint16_t predictionCount;
 	TPPrediction* pPredictions;
 	TPTensor* grads_sum1;
@@ -407,7 +407,7 @@ typedef struct ANN_CNN_NeuralNet
 } TNeuralNet, * TPNeuralNet;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-double GenerateRandomNumber();
+float32_t GenerateRandomNumber();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void TensorFillZero(TPTensor PTensor);
 void TensorFillGauss(TPTensor PTensor);
@@ -445,7 +445,6 @@ DLLEXPORT void NeuralNetTrain(TPNeuralNet PNeuralNet, TPVolume PVolume);
 DLLEXPORT char* NeuralNetGetLayerName(TLayerType LayerType);
 /// @brief ////////////////////////////////////////////////////////////////////////////////////////////////
 /// @return
-DLLEXPORT void NeuralNetInit_Cifar10_11(void);
 
 time_t GetTimestamp(void);
 double GenerateGaussRandom(void);
