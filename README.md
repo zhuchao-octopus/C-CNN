@@ -1,22 +1,13 @@
-C-CNN (C Convolutional Neural Network)是一个用C语言编写的开源深度学习框架，它实现了卷积神经网络（CNN）的基本要素和算法。C-CNN的目标是为那些熟悉C语言编程，但又想在嵌入式系统或其他特定环境中使用深度学习技术的开发者提供一个简单易用的解决方案。C-CNN致力于实现高性能的深度学习算法，同时保持代码简洁、易于理解和可扩展。
+This is a Convolutional Neural Network (CNN) in C. This project aims to showcase the power and versatility of the C language in building deep learning models. The Convolutional Neural Network is a popular and effective architecture for image classification, object detection, and other computer vision tasks. Through this project allowing users to train and deploy their own deep learning models.
 
-项目特点，C-CNN项目具有以下几个特点：
+Key features of the project include:
 
-纯C语言实现：C-CNN完全用C语言编写，不依赖任何第三方库或平台特定的接口，适用于各种C语言开发环境。
-轻量级：C-CNN的代码精简且高效，适用于嵌入式系统和资源受限的环境，可以运行在单片机和其他低功耗设备上。
-易于移植：C-CNN可以轻松移植到各种硬件平台和操作系统，适用于嵌入式系统、单片机、FPGA等多种应用场景。
-支持多通道卷积：C-CNN实现了多通道卷积，可以处理包含多个通道的输入图像，此外，C-CNN还扩展支持深度可分离卷积（Depthwise Separable Convolution）等多种卷积方式。
-代码开源：C-CNN是一个开源项目，使用MIT许可证发布，任何人都可以自由使用、修改和分发代码。
-应用场景： C-CNN可以应用于各种深度学习任务，包括图像分类、目标检测、语音识别等。由于其轻量级和高性能特性，它特别适用于嵌入式图像识别、物联网设备、智能传感器和机器人等领域。
-项目结构，C-CNN项目的代码库主要包含以下几个主要部分：
+Cross-platform: This project can be compiled on different platforms, such as windows linux android stm32 embedded platforms.
 
-神经网络模型：包括卷积层、池化层、全连接层等，用于构建深度学习模型。
-前向传播：实现神经网络的前向传播算法，用于推理和预测。
-反向传播：实现神经网络的反向传播算法，用于训练和优化模型。
-数学库：包括矩阵运算、激活函数等数学函数，用于实现神经网络的计算。
-示例代码：包含一些示例代码，演示如何使用C-CNN进行图像分类和目标检测等任务。
-如何参与，您可以通过以下方式参与C-CNN项目的开发和贡献：
+Customizable CNN architecture: The framework provides flexibility in defining the layers, such as convolutional layers,active layer, pooling layers, fully connected layers,and softmax layer and so on, allowing users to tailor the network architecture to their specific needs.
 
-提交bug和问题：如果您在使用C-CNN时遇到问题，请在GitHub上提交issue，我们会尽快解决。
-参与开发：如果您对深度学习和C语言编程有兴趣，欢迎参与C-CNN的开发工作，欢迎您的贡献和提交Pull Request。
-提供意见和建议：您的意见和建议对我们改进项目非常重要，欢迎随时提供反馈。
+Training and optimization: The project includes functions for training the CNN using backpropagation and gradient descent. Users can choose different optimization techniques, such as stochastic gradient descent (SGD) or Adam optimizer, to improve the training process. Evaluation and prediction: Once trained, the CNN model can be evaluated on test datasets, providing accuracy metrics and performance evaluation. Additionally, it supports making predictions on unseen data, enabling applications like image classification.
+
+I have documented the code extensively, providing explanations and examples to help users understand the implementation and utilize the framework effectively. The project also includes sample cifar-10 datasets and an example script to guide users through the training process. I welcome contributions, feedback, and collaborations from the open-source community. Feel free to explore the project on GitHub [https://github.com/zhuchao-octopus/C-CNN], where you can find the complete source code, instructions, and further details.
+
+Thank you for your time and interest in this project. I hope it proves to be a valuable resource for anyone interested in implementing CNNs in C.
