@@ -1,0 +1,46 @@
+# depslib dependency file v1.0
+1728702448 source:f:\codeblockprojects\c-cnn\src\ann-cnn.c
+	"ann-cnn.h"
+	"usart.h"
+	"octopus.h"
+
+1728703350 f:\codeblockprojects\c-cnn\src\ann-cnn.h
+	<stdarg.h>
+	<stdio.h>
+	<stdbool.h>
+	<stdlib.h>
+	<string.h>
+	<math.h>
+	<time.h>
+	<float.h >
+	"usart.h"
+	"octopus.h"
+	<windows.h>
+
+1728702448 source:f:\codeblockprojects\c-cnn\src\ann-configuration.c
+	"usart.h"
+	"octopus.h"
+	"string.h"
+	"ann-cnn.h"
+	"ann-dataset.h"
+
+1728702448 f:\codeblockprojects\c-cnn\src\ann-dataset.h
+	<stdarg.h>
+	<stdio.h>
+	<stdbool.h>
+	<stdlib.h>
+	<string.h>
+	"ann-cnn.h"
+
+1728702448 source:f:\codeblockprojects\c-cnn\src\ann-dataset.c
+	"usart.h"
+	"octopus.h"
+	"ann-dataset.h"
+
+1728702448 source:f:\codeblockprojects\c-cnn\src\ann-trainer.c
+	"usart.h"
+	"octopus.h"
+	"string.h"
+	"ann-cnn.h"
+	"ann-dataset.h"
+
