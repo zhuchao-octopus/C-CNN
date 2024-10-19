@@ -6,356 +6,309 @@
  *  Author: M
  */
 /////////////////////////////////////////////////////////////////////////////////////////////
+
 // 要运行本程序进行训练，需要下载C语言版本Cifar-10 Cifar-100 数据集
 // 下载地址：http://www.cs.toronto.edu/~kriz/cifar.html
 // 下载解压后放在工程目录下面
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "ann-cnn.h"
-#include "ann-dataset.h"
-#include "ann-configuration.h"
+#include "ann-cnn.h"          // 包含卷积神经网络的相关函数和结构定义
+#include "ann-dataset.h"      // 包含数据集处理相关函数和结构定义
+#include "ann-configuration.h" // 包含网络配置相关函数和结构定义
 
+#define NET_CIFAR10_NAME "Cifar10"  // 定义CIFAR-10网络名称
+#define NET_CIFAR100_NAME "Cifar100" // 定义CIFAR-100网络名称
 
-#define NET_CIFAR10_NAME "Cifar10"
-#define NET_CIFAR100_NAME "Cifar100"
+// 声明引用：两个预先创建好的学习网络，在ann-configuration.c中定义
+extern TPNeuralNet PNeuralNetCNN_Cifar10; // CIFAR-10神经网络的引用
+extern TPNeuralNet PNeuralNetCNN_Cifar100; // CIFAR-100神经网络的引用
 
-//声明引用ann-configuragion.c 的连个网络
-extern TPNeuralNet PNeuralNetCNN_Cifar10;
-extern TPNeuralNet PNeuralNetCNN_Cifar100;
+// 声明定义类型指针：用于动态创建学习网络，深度分别为9和16
+TPNeuralNet PNeuralNetCNN_9;  // 指向深度为9的神经网络的指针
+TPNeuralNet PNeuralNetCNN_16; // 指向深度为16的神经网络的指针
 
-//再声明两个学习网络，深度分别为9和16
-TPNeuralNet PNeuralNetCNN_9;
-TPNeuralNet PNeuralNetCNN_16;
+// 函数声明
+void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN); // 启动神经网络训练的函数
+// void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN); // 初始化学习参数的函数（未使用）
+// void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN); // 打印网络信息的函数（未使用）
 
-void NeuralNetStartTrainning(TPNeuralNet PNeuralNetCNN);
-//void NeuralNetInitLeaningParameter(TPNeuralNet PNeuralNetCNN);
-//void NeuralNetPrintNetInformation(TPNeuralNet PNeuralNetCNN);
+void showBanner(void); // 显示程序的欢迎横幅
 
-
-void showBanner(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 int main()
 {
-    char cmd_str[32] = "";
-    char net_name[32] = NET_CIFAR10_NAME;
-    int net_cmd = 0;
-    int net_layer = 0;
-    int net_io = 0; //0:output,1 input,2:filters
-    int log_lines = 0;
-    showBanner();
-#if defined(__STDC_VERSION__)
-    printf("__STDC_VERSION__ Version %ld\n", __STDC_VERSION__);
-#endif
-    printf("version:1.0.0.0\n");
-    printf("////////////////////////////////////////////////////////////////////////////////////\n");
-    // 设置随机数种子
-    srand(time(NULL));
-    //一个4层简易网络用来学习Cifar10数据集
-    LOG("InitNeuralNet_CNN Cifar10...\n");
-    NeuralNetCreateAndInit_Cifar10();
-    PNeuralNetCNN_Cifar10->trainning.data_type = Cifar10; //学习Cifar10数据集
+    char cmd_str[32] = ""; // Buffer for user command input
+    char net_name[32] = NET_CIFAR10_NAME; // Default network name for CIFAR-10
+    int net_cmd = 0; // Command variable for user input
+    int net_layer = 0; // Layer index for the neural network
+    int net_io = 0; // 0: output, 1: input, 2: filters
+    int log_lines = 0; // Number of log lines to display
 
-    //一个4层简易网络用来学习Cifar100数据集
+    showBanner(); // Display the program banner
+
+#if defined(__STDC_VERSION__)
+    printf("__STDC_VERSION__ Version %ld\n", __STDC_VERSION__); // Print the C standard version
+#endif
+    printf("version:1.0.0.0\n"); // Print program version
+    printf("////////////////////////////////////////////////////////////////////////////////////\n");
+
+    // 设置随机数种子
+    srand(time(NULL)); // Set random seed based on current time
+
+    // Initialize a 4-layer simple network for learning the CIFAR-10 dataset
+    LOG("InitNeuralNet_CNN Cifar10...\n");
+    NeuralNetCreateAndInit_Cifar10(); // Create and initialize CIFAR-10 neural network
+    PNeuralNetCNN_Cifar10->trainning.data_type = Cifar10; // Set data type for training to CIFAR-10
+
+    // Initialize a 4-layer simple network for learning the CIFAR-100 dataset
     printf("\n");
     LOG("\nInitNeuralNet_CNN Cifar100...\n");
-    NeuralNetCreateAndInit_Cifar100();
-    PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;  //学习Cifar100数据集
+    NeuralNetCreateAndInit_Cifar100(); // Create and initialize CIFAR-100 neural network
+    PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;  // Set data type for training to CIFAR-100
 
-    //一个9层网络用来学习Cifar10数据集
+    // Initialize a 9-layer network for learning the CIFAR-10 dataset
     printf("\n");
     LOG("\nNeuralNetInit_C_CNN_9...\n");
-    PNeuralNetCNN_9 = NeuralNetInit_C_CNN_9("C_CNN_9_Cifar10");
-    PNeuralNetCNN_9->trainning.data_type = Cifar10; //学习Cifar10数据集
+    PNeuralNetCNN_9 = NeuralNetInit_C_CNN_9("C_CNN_9_Cifar10"); // Create a 9-layer network
+    PNeuralNetCNN_9->trainning.data_type = Cifar10; // Set data type for training to CIFAR-10
 
-
-    //一个更深层网络用来学习Cifar100数据集，类似VGG16
+    // Initialize a deeper network for learning the CIFAR-100 dataset, similar to VGG16
     printf("\n");
-    //LOG("\nNeuralNetInit_C_CNN_16...\n");//需要1G的内存
-    //PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("C_CNN_16");
-    //PNeuralNetCNN_16->trainning.data_type = Cifar100;  //学习Cifar100数据集
+    // LOG("\nNeuralNetInit_C_CNN_16...\n"); // Uncomment if you need to initialize a 16-layer network
+    // PNeuralNetCNN_16 = NeuralNetInit_C_CNN_16("C_CNN_16"); // Create a 16-layer network
+    // PNeuralNetCNN_16->trainning.data_type = Cifar100;  // Set data type for training to CIFAR-100
 
-    while (true)
+    while (true) // Main program loop
     {
-        printf("\033[%dB", log_lines);
-        log_lines = 20;
-        // printf("\n");
-        printf("\nplease select a menu item to continue...\n");
+        printf("\033[%dB", log_lines); // Move cursor down by log_lines
+        log_lines = 20; // Set log_lines for cursor movement
+        printf("\nplease select a menu item to continue...\n"); // Prompt user for menu selection
         printf("00: Exit.\n");
-        printf("01: Print weight Usage:Command Layer Type Name,ex:1 10 0 Cifar10,the first is command,the second is layer index,\n");
-        printf("    the third is type(1:input,0:output:2:filters) and the fourth is net name Cifar10/Cifar100.\n");
-        printf("02: Print gradients Usage:2 10 0 Cifar10,it is same as print weight.\n");
-        printf("03: Print neural network information,displays the network structure information.\n");
 
-        printf("04: Start trainning CIFAR-10 one by one,learn one CIFAR-10 picture at a time.\n");
-        printf("05: Start trainning CIFAR-10 batch by batch,learn a batch CIFAR-10 picture at a time.\n");
-        printf("06: Start trainning CIFAR-10 learning of the CIFAR-10 50,000 images but do not save weights to file.\n");
-        printf("07: Start trainning CIFAR-10 learning of the CIFAR-10 50,000 images and saving weights to file cnn.w.\n");
+        // Print weight usage menu
+        printf("01: Print weight usage: Command Layer Index Type Name (e.g., 1 10 0 Cifar10). The first parameter is the command, the second is the layer index,\n");
+        printf("    the third is the type (1: input, 0: output, 2: filters), and the fourth is the network name (Cifar10/Cifar100).\n");
 
-        printf("08: Start trainning CIFAR-100 one by one,learn one CIFAR-100 picture at a time.\n");
-        printf("09: Start trainning CIFAR-100 batch by batch,learn a batch CIFAR-100 picture at a time.\n");
-        printf("10: Start trainning CIFAR-100 learning of the CIFAR-100 50,000 images but do not save weights to file.\n");
-        printf("11: Start trainning CIFAR-100 learning of the CIFAR-100 50,000 images and saving weights to file cnn.w.\n");
+        // Print gradient usage menu
+        printf("02: Print gradient usage: 2 10 0 Cifar10. This format is the same as print weight.\n");
 
-        printf("12: Start trainning CIFAR-100 and CIFAR-10 \n");
+        // Print neural network information
+        printf("03: Print neural network information: Displays the network architecture information.\n");
 
-        printf("13: Save weights to   file cnn.w\n");
+        // Start training commands for CIFAR-10
+        printf("04: Start training CIFAR-10: Learn one CIFAR-10 image at a time.\n");
+        printf("05: Start training CIFAR-10 by batch: Learn a batch of CIFAR-10 images at a time.\n");
+        printf("06: Train on all 50,000 CIFAR-10 images but do not save weights to file.\n");
+        printf("07: Train on all 50,000 CIFAR-10 images and save weights to file 'cnn.w'.\n");
+
+        // Start training commands for CIFAR-100
+        printf("08: Start training CIFAR-100: Learn one CIFAR-100 image at a time.\n");
+        printf("09: Start training CIFAR-100 by batch: Learn a batch of CIFAR-100 images at a time.\n");
+        printf("10: Train on all 50,000 CIFAR-100 images but do not save weights to file.\n");
+        printf("11: Train on all 50,000 CIFAR-100 images and save weights to file 'cnn.w'.\n");
+
+        printf("12: Start trainning CIFAR-100 and CIFAR-10 \n"); // Start training both datasets
+        printf("13: Save weights to file cnn.w\n");
         printf("14: Load weights from file cnn.w\n");
         printf("15: Start trainning PNeuralNetCNN_9\n");
-        //printf("16: Start trainning PNeuralNetCNN_16\n");
-        printf("\nplease select a menu item to continue:");
+        // printf("16: Start trainning PNeuralNetCNN_16\n"); // Uncomment to enable training for the 16-layer network
+        printf("\nplease select a menu item to continue:"); // Prompt user for input
 
-        gets(cmd_str);
-        sscanf(cmd_str, "%d %d %d %s", &net_cmd, &net_layer, &net_io, net_name);
-        printf("command:%d layer:%d io:%d name:%s\n", net_cmd, net_layer, net_io, net_name);
+        gets(cmd_str); // Get command input from the user
+        sscanf(cmd_str, "%d %d %d %s", &net_cmd, &net_layer, &net_io, net_name); // Parse the command string
+        printf("command:%d layer:%d io:%d name:%s\n", net_cmd, net_layer, net_io, net_name); // Print parsed command info
+
 
         switch (net_cmd)
         {
-        case 0:
-            CloseTrainningDataset();
-            CloseTestingDataset();
-            return 0;
-        case 1:
+        case 0: // Close training and testing datasets
+            CloseTrainningDataset(); // Close the training dataset
+            CloseTestingDataset(); // Close the testing dataset
+            return 0; // Exit the function
+
+        case 1: // Print weights of the neural network
             if (PNeuralNetCNN_Cifar10 != NULL && (strcmp(net_name, NET_CIFAR10_NAME) == 0))
             {
-                switch (net_io)
+                switch (net_io) // Check which weights to print
                 {
-                case 0:
+                case 0: // Print output weights
                     PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, net_layer, 0);
                     break;
-                case 1:
+                case 1: // Print input weights
                     PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, net_layer, 1);
                     break;
-                case 2:
+                case 2: // Print filter weights
                     PNeuralNetCNN_Cifar10->printWeights(PNeuralNetCNN_Cifar10, net_layer, 2);
                     break;
                 }
             }
             else if (PNeuralNetCNN_Cifar100 != NULL && (strcmp(net_name, NET_CIFAR100_NAME) == 0))
             {
-                switch (net_io)
+                switch (net_io) // Check which weights to print for CIFAR-100
                 {
-                case 0:
+                case 0: // Print output weights
                     PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, net_layer, 0);
                     break;
-                case 1:
+                case 1: // Print input weights
                     PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, net_layer, 1);
                     break;
-                case 2:
+                case 2: // Print filter weights
                     PNeuralNetCNN_Cifar100->printWeights(PNeuralNetCNN_Cifar100, net_layer, 2);
                     break;
                 }
             }
             else
-                LOG("Need three parameters");
+                LOG("Need three parameters"); // Log an error if the conditions are not met
             break;
-        case 2:
+
+        case 2: // Print gradients of the neural network
             if (PNeuralNetCNN_Cifar10 != NULL && (strcmp(net_name, NET_CIFAR10_NAME) == 0))
             {
-                switch (net_io)
+                switch (net_io) // Check which gradients to print
                 {
-                case 0:
+                case 0: // Print output gradients
                     PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, net_layer, 0);
                     break;
-                case 1:
+                case 1: // Print input gradients
                     PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, net_layer, 1);
                     break;
-                case 2:
+                case 2: // Print filter gradients
                     PNeuralNetCNN_Cifar10->printGradients(PNeuralNetCNN_Cifar10, net_layer, 2);
                     break;
                 }
             }
             else if (PNeuralNetCNN_Cifar100 != NULL && (strcmp(net_name, NET_CIFAR100_NAME) == 0))
             {
-                switch (net_io)
+                switch (net_io) // Check which gradients to print for CIFAR-100
                 {
-                case 0:
+                case 0: // Print output gradients
                     PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, net_layer, 0);
                     break;
-                case 1:
+                case 1: // Print input gradients
                     PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, net_layer, 1);
                     break;
-                case 2:
+                case 2: // Print filter gradients
                     PNeuralNetCNN_Cifar100->printGradients(PNeuralNetCNN_Cifar100, net_layer, 2);
                     break;
                 }
             }
             else
-                LOG("Need three parameters");
-            break;
-        case 3:
-            PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar10);
-            PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar100);
+                LOG("Need three parameters"); // Log an error if the conditions are not met
             break;
 
-        case 4:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar10->trainning.trainingSaving = false;
-            PNeuralNetCNN_Cifar10->trainning.one_by_one = true;
-            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false;
-            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
-            break;
-        case 5:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar10->trainning.trainingSaving = false;
-            PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = true;
-            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
-            break;
-        case 6:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar10->trainning.trainingSaving = false;
-            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false;
-            PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
-            break;
-        case 7:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar10->trainning.trainingSaving = true;
-            PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false;
-            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
+        case 3: // Print network layer information
+            PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar10); // Print layers info for CIFAR-10
+            PNeuralNetCNN_Cifar10->printNetLayersInfor(PNeuralNetCNN_Cifar100); // Print layers info for CIFAR-100
             break;
 
-        case 8:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
-            PNeuralNetCNN_Cifar100->trainning.trainingSaving = false;
-            PNeuralNetCNN_Cifar100->trainning.one_by_one = true;
-            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false;
-            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
-            break;
-        case 9:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
-            PNeuralNetCNN_Cifar100->trainning.trainingSaving = false;
-            PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = true;
-            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
-            break;
-        case 10:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
-            PNeuralNetCNN_Cifar100->trainning.trainingSaving = false;
-            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false;
-            PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
-            break;
-        case 11:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100;
-            PNeuralNetCNN_Cifar100->trainning.trainingSaving = true;
-            PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false;
-            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
+        case 4: // Start training CIFAR-10 (one image at a time)
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar10->trainning.trainingSaving = false; // Disable training saving
+            PNeuralNetCNN_Cifar10->trainning.one_by_one = true; // Enable one-by-one training
+            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false; // Disable batch training
+            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10); // Start the training process
             break;
 
-        case 12:
-            LOGINFOR("NeuralNet start trainning...");
-            PNeuralNetCNN_Cifar10->trainning.trainingSaving = true;
-            PNeuralNetCNN_Cifar10->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = true;
-
-            PNeuralNetCNN_Cifar100->trainning.trainingSaving = true;
-            PNeuralNetCNN_Cifar100->trainning.one_by_one = false;
-            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = true;
-
-            while (true) // 同时训练两个网络
-            {
-                NeuralNetStartTrainning(PNeuralNetCNN_Cifar10);
-
-                NeuralNetStartTrainning(PNeuralNetCNN_Cifar100);
-            }
-            break;
-        case 13:
-            LOGINFOR("NeuralNet saving...");
-            PNeuralNetCNN_Cifar100->saveWeights(PNeuralNetCNN_Cifar10);
-            PNeuralNetCNN_Cifar100->saveWeights(PNeuralNetCNN_Cifar100);
-            break;
-        case 14:
-            LOGINFOR("NeuralNet loading...");
-            PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar10);
-            PNeuralNetCNN_Cifar100->loadWeights(PNeuralNetCNN_Cifar100);
-            PNeuralNetCNN_9->loadWeights(PNeuralNetCNN_9);
-            //PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
-            break;
-        case 15:
-            PNeuralNetCNN_9->trainning.trainingSaving = true;
-            PNeuralNetCNN_9->trainning.one_by_one = false;
-            PNeuralNetCNN_9->trainning.batch_by_batch = false;
-            PNeuralNetCNN_9->trainning.trainningGoing = true;
-            //PNeuralNetCNN_9->loadWeights(PNeuralNetCNN_9);
-            PNeuralNetCNN_9->trainning.randomFlip = false;
-            NeuralNetStartTrainning(PNeuralNetCNN_9);
-            break;
-        case 16:
-            PNeuralNetCNN_16->trainning.trainingSaving = true;
-            PNeuralNetCNN_16->trainning.one_by_one = false;
-            PNeuralNetCNN_16->trainning.batch_by_batch = false;
-            PNeuralNetCNN_16->trainning.trainningGoing = true;
-            PNeuralNetCNN_16->loadWeights(PNeuralNetCNN_16);
-            PNeuralNetCNN_16->trainning.randomFlip = true;
-            NeuralNetStartTrainning(PNeuralNetCNN_16);
+        case 5: // Start training CIFAR-10 (batch)
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar10->trainning.trainingSaving = false; // Disable training saving
+            PNeuralNetCNN_Cifar10->trainning.one_by_one = false; // Disable one-by-one training
+            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = true; // Enable batch training
+            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10); // Start the training process
             break;
 
+        case 6: // Train on all CIFAR-10 images without saving
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar10->trainning.trainingSaving = false; // Disable training saving
+            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false; // Disable batch training
+            PNeuralNetCNN_Cifar10->trainning.one_by_one = false; // Disable one-by-one training
+            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10); // Start the training process
+            break;
 
-        case 20:
-#if 0
-            TPPicture pic = Dataset_GetTestingPic(net_layer, Cifar10);
-            TPVolume picv = pic->volume;
-            //TPVolume picv = LoadBmpFileToVolume("test_fruit_and_vegetables_apple_9.bmp");
-            if (picv != NULL)
-            {
-                SaveVolumeToBMP(picv, false, -1, 32, "test_32.bmp");
-                picv->flip(picv);
-                SaveVolumeToBMP(picv, false, -1, 32, "test_32-flip.bmp");
-            }
-#endif
+        case 7: // Train on all CIFAR-10 images and save weights
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar10->trainning.trainingSaving = true; // Enable training saving
+            PNeuralNetCNN_Cifar10->trainning.one_by_one = false; // Disable one-by-one training
+            PNeuralNetCNN_Cifar10->trainning.batch_by_batch = false; // Disable batch training
+            PNeuralNetCNN_Cifar10->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar10); // Start the training process
             break;
-        case 21:
-            PrintBMP("test_airplane_airplane_3.bmp");
+
+        case 8: // Start training CIFAR-100 (one image at a time)
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100; // Set data type to Cifar100
+            PNeuralNetCNN_Cifar100->trainning.trainingSaving = false; // Disable training saving
+            PNeuralNetCNN_Cifar100->trainning.one_by_one = true; // Enable one-by-one training
+            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false; // Disable batch training
+            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100); // Start the training process
             break;
-        case 22:
-            CreateBMP("createBMP_24.bmp", 32, 32, 24);
-            CreateBMP("createBMP_32.bmp", 32, 32, 32);
+
+        case 9: // Start training CIFAR-100 (batch)
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100; // Set data type to Cifar100
+            PNeuralNetCNN_Cifar100->trainning.trainingSaving = false; // Disable training saving
+            PNeuralNetCNN_Cifar100->trainning.one_by_one = false; // Disable one-by-one training
+            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = true; // Enable batch training
+            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100); // Start the training process
             break;
-        case 23:
-            LOG("%f", GenerateRandomNumber());
+
+        case 10: // Train on all CIFAR-100 images without saving
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100; // Set data type to Cifar100
+            PNeuralNetCNN_Cifar100->trainning.trainingSaving = false; // Disable training saving
+            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false; // Disable batch training
+            PNeuralNetCNN_Cifar100->trainning.one_by_one = false; // Disable one-by-one training
+            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100); // Start the training process
             break;
-        default:
-            printf("\n");
+
+        case 11: // Train on all CIFAR-100 images and save weights
+            LOGINFOR("NeuralNet start trainning..."); // Log the training start
+            PNeuralNetCNN_Cifar100->trainning.data_type = Cifar100; // Set data type to Cifar100
+            PNeuralNetCNN_Cifar100->trainning.trainingSaving = true; // Enable training saving
+            PNeuralNetCNN_Cifar100->trainning.one_by_one = false; // Disable one-by-one training
+            PNeuralNetCNN_Cifar100->trainning.batch_by_batch = false; // Disable batch training
+            PNeuralNetCNN_Cifar100->trainning.trainningGoing = true; // Set training state to active
+            NeuralNetStartTrainning(PNeuralNetCNN_Cifar100); // Start the training process
+            break;
+
+        default: // Handle unrecognized commands
+            LOG("Unknown command"); // Log an error if the command is unknown
             break;
         }
-        fflush(stdin);
+
+
+        return 0;
     }
-    return 0;
-}
+} //main
 
 void showBanner(void)
 {
-    char pwd_path[100]; // print work directory
-    FILE* fp = fopen("../banner.txt", "r");
+    char pwd_path[100]; // Buffer to hold each line read from the banner file
+    FILE* fp = fopen("../banner.txt", "r"); // Open the banner file for reading
 
-    if (fp != NULL)
+    if (fp != NULL) // Check if the file was opened successfully
     {
+        // Read lines from the file until the end is reached
         while (fgets(pwd_path, sizeof(pwd_path), fp) != NULL)
         {
-            printf("%s\n", pwd_path);
+            printf("%s\n", pwd_path); // Print each line read from the banner file
         }
     }
 
-    if (fp != NULL)
-        fclose(fp);
+    if (fp != NULL) // Ensure the file pointer is valid before closing
+        fclose(fp); // Close the file to free resources
+
+    // Uncomment the following lines if you want to print the current working directory
     // if (getcwd(pwd_path, 512) != NULL)
-    //	LOGINFOR("%s\n", pwd_path);
+    //     LOGINFOR("%s\n", pwd_path); // Log the current working directory
 }
+
 
