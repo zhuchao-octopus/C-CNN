@@ -1,13 +1,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 /*
  *  ann-cnn.h
- *  Home Page :http://www.1234998.top
- *  Created on: Mar 29, 2023
+ *  Home Page: http://www.1234998.top
+ *  Created on: March 29, 2023
  *  Author: M
  */
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _INC_ANN_CNN_H_
+#ifndef _INC_ANN_CNN_H_ // Prevent multiple inclusions of header file
 #define _INC_ANN_CNN_H_
 
 #include <stdarg.h>
@@ -17,78 +17,78 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include <float.h >
+#include <float.h>
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#define DEPTHWISE_POINTWISE_CONVOLUTION
-#define NULL ((void *)0)
-#define MINFLOAT_POSITIVE_NUMBER (1.175494351E-38)	// 最小正规化数
-#define MAXFLOAT_POSITIVE_NUMBER (3.402823466E+38)	// 最大正规化数
-#define MAXFLOAT_NEGATIVE_NUMBER (-1.175494351E-38) // 负数的最大值
-#define MINFLOAT_NEGATIVE_NUMBER (-3.402823466E+38) // 负数的最小值
+#define DEPTHWISE_POINTWISE_CONVOLUTION // Define depthwise separable convolution
+#define NULL ((void *)0) // Define null pointer
+#define MINFLOAT_POSITIVE_NUMBER (1.175494351E-38) // Minimum normalized positive number
+#define MAXFLOAT_POSITIVE_NUMBER (3.402823466E+38) // Maximum normalized positive number
+#define MAXFLOAT_NEGATIVE_NUMBER (-1.175494351E-38) // Maximum normalized negative number
+#define MINFLOAT_NEGATIVE_NUMBER (-3.402823466E+38) // Minimum normalized negative number
 
-//上溢或下溢
+// Check for float overflow or underflow
 #define IsFloatOverflow(x) (x > MAXFLOAT_POSITIVE_NUMBER || x < MINFLOAT_NEGATIVE_NUMBER)
 // #define IsFloatUnderflow(x)(x == 0)
 
-#define PRINTFLAG_WEIGHT 0
-#define PRINTFLAG_GRADS 1
-#define PRINTFLAG_FORMAT "%9.6f"
+#define PRINTFLAG_WEIGHT 0 // Flag for printing weights
+#define PRINTFLAG_GRADS 1 // Flag for printing gradients
+#define PRINTFLAG_FORMAT "%9.6f" // Print format
 
-#define NEURALNET_CNN_WEIGHT_FILE_NAME "_cnn.w"
-#define NEURALNET_CNN_FILE_NAME "_cnn.csv"
-#define NEURALNET_ERROR_BASE 10001
+#define NEURALNET_CNN_WEIGHT_FILE_NAME "_cnn.w" // Neural network weight file name
+#define NEURALNET_CNN_FILE_NAME "_cnn.csv" // Neural network file name
+#define NEURALNET_ERROR_BASE 10001 // Base error number for neural network
 
-#define PLATFORM_WINDOWS
-//#define PLATFORM_WINDOWS_DLL
+#define PLATFORM_WINDOWS // Define platform as Windows
+//#define PLATFORM_WINDOWS_DLL // Define as Windows DLL
 
-// #define PLATFORM_STM32
+// #define PLATFORM_STM32 // Define as STM32 platform
 
-#define __DEBUG__LOG__
+#define __DEBUG__LOG__ // Enable debug logging
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-#ifdef PLATFORM_STM32
+#ifdef PLATFORM_STM32 // Includes and definitions for STM32 platform
 #include "usart.h"
 #include "octopus.h"
 // #include "arm_math.h"
 // #define DSP_SQRT_FUNCTION arm_sqrt_f32
-#define CNNLOG debug_printf
-#define LOG debug_printf
-#define FUNCTIONNAME __func__
-#define DLLEXPORT
+#define CNNLOG debug_printf // Use debug print function
+#define LOG debug_printf // Use debug print function
+#define FUNCTIONNAME __func__ // Get current function name
+#define DLLEXPORT // DLL export definition
 
-#else
+#else // Definitions for other platforms (e.g., Windows)
 
 #include <windows.h>
-typedef double float32_t;
-typedef int uint32_t;
-typedef short uint16_t;
-typedef bool bool_t;
-typedef unsigned char uint8_t;
+typedef double float32_t; // Define 32-bit float type
+typedef int uint32_t; // Define 32-bit unsigned integer type
+typedef short uint16_t; // Define 16-bit unsigned integer type
+typedef bool bool_t; // Define boolean type
+typedef unsigned char uint8_t; // Define 8-bit unsigned integer type
 
-#define CNNLOG printf
-#define LOG printf
-#define LOGLOG printf
-#define FUNCTIONNAME __func__
+#define CNNLOG printf // Use standard print function
+#define LOG printf // Use standard print function
+#define LOGLOG printf // Use standard print function
+#define FUNCTIONNAME __func__ // Get current function name
 
-#ifdef PLATFORM_WINDOWS_DLL
-#define DLLEXPORT _declspec(dllexport)
+#ifdef PLATFORM_WINDOWS_DLL // If Windows DLL is defined
+#define DLLEXPORT _declspec(dllexport) // DLL export
 #else
-#define DLLEXPORT
+#define DLLEXPORT // No export
 #endif
 
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-#ifdef __DEBUG__LOG__
-#define LOGINFO(format, ...)   LOGLOG("[Infor][%-9.9s][%s]:" format "\n", __FILE__, __func__, ##__VA_ARGS__)
-#define LOGINFOR(format, ...)  LOGLOG("[Infor][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
-#define LOGERROR(format, ...)  LOGLOG("[Error][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+#ifdef __DEBUG__LOG__ // If debug logging is enabled
+#define LOGINFO(format, ...)   LOGLOG("[Info][%-9.9s][%s]:" format "\n", __FILE__, __func__, ##__VA_ARGS__) // Info log
+#define LOGINFOR(format, ...)  LOGLOG("[Info][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__) // Line info log
+#define LOGERROR(format, ...)  LOGLOG("[Error][%-9.9s][Line:%04d][%s]:" format "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__) // Error log
 #else
-#define LOGINFO(format, ...)
-#define LOGINFOR(format, ...)
-#define LOGERROR(format, ...)
+#define LOGINFO(format, ...) // Disable info log
+#define LOGINFOR(format, ...) // Disable line info log
+#define LOGERROR(format, ...) // Disable error log
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,26 +131,26 @@ typedef enum LayerType
  */
 typedef enum OptimizeMethod
 {
-    Optm_Gradient,
-    Optm_Stochastic,
-    Optm_BatchGradient,
-    Optm_Momentum,
-    Optm_Nesterov,
-    Optm_Adagrad,
-    Optm_Adadelta,
-    Optm_RMSprop,
-    Optm_Adam,
-    Optm_Adamax,
-    Optm_Nadam,
-    Optm_AdaBound,
-    Optm_AdaBelief,
-    Optm_AdaMod,
-    Optm_AdaShift,
-    Optm_AdaSOM,
-    Optm_AdaHessian,
-    Optm_AdaLAMB,
-    Optm_AdaLIPS,
-    Optm_AdaRAdam
+    Optm_Gradient, // 梯度下降法
+    Optm_Stochastic, // 随机梯度下降法
+    Optm_BatchGradient, // 批量梯度下降法
+    Optm_Momentum, // 动量法
+    Optm_Nesterov, // Nesterov加速梯度
+    Optm_Adagrad, // 自适应梯度算法
+    Optm_Adadelta, // 自适应矩估计算法
+    Optm_RMSprop, // 自适应矩估计算法
+    Optm_Adam, // 自适应矩估计算法
+    Optm_Adamax, // 自适应矩估计算法
+    Optm_Nadam, // 自适应矩估计算法
+    Optm_AdaBound, // 自适应学习率优化算法
+    Optm_AdaBelief, // 自适应学习率优化算法
+    Optm_AdaMod, // 自适应学习率优化算法
+    Optm_AdaShift, // 自适应学习率优化算法
+    Optm_AdaSOM, // 自适应学习率优化算法
+    Optm_AdaHessian, // 自适应学习率优化算法
+    Optm_AdaLAMB, // 自适应学习率优化算法
+    Optm_AdaLIPS, // 自适应学习率优化算法
+    Optm_AdaRAdam // 自适应学习率优化算法
 } TOptimizeMethod;
 
 /////////////////////////////////////////////////////////////////////////////////////////////

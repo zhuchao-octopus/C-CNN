@@ -4,106 +4,147 @@
  *  Home Page :http://www.1234998.top
  *  Created on: Mar 29, 2023
  *  Author: M
+ *
+ *  Description:
+ *  This file implements the core functionality of a Convolutional Neural Network (CNN).
+ *  It includes definitions for various layer types, random number generation utilities,
+ *  and mathematical constants used throughout the CNN operations.
+ *
+ *  Platform Support:
+ *  This implementation is designed to be compatible with the STM32 platform.
+ *  It utilizes USART for serial communication and includes necessary libraries.
  */
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "ann-cnn.h"
+#include "ann-cnn.h"  // Include the header file containing declarations for CNN functions and structures
 
-#ifdef PLATFORM_STM32
-#include "usart.h"
-#include "octopus.h"
+#ifdef PLATFORM_STM32  // Conditional compilation for STM32 platform
+#include "usart.h"     // Include USART header for serial communication
+#include "octopus.h"   // Include additional header files as needed for STM32 functionalities
 #endif
 
+// Array of strings representing the names of different CNN layer types
+char* CNNTypeName[] =
+{
+    "Input",          // Input layer
+    "Convolution",    // Convolutional layer
+    "ReLu",           // Rectified Linear Unit activation layer
+    "Pool",           // Pooling layer
+    "FullyConnection", // Fully connected (dense) layer
+    "SoftMax",        // SoftMax output layer for classification
+    "None"           // Placeholder for no layer
+};
 
-char* CNNTypeName[] = { "Input", "Convolution", "ReLu", "Pool", "FullyConnection", "SoftMax", "None" };
+// Define constants for random number generation
+#define RAN_RAND_MAX        2147483647            // Maximum value for random number generation
+#define RAN_RNOR_C              1.7155277699214135    // Constant for generating normally distributed random numbers
+#define RAN_RNOR_R              (1.0 / RAN_RNOR_C)     // Inverse of the normal distribution constant
+#define RAN_IEEE_1                 4.656612877414201e-10  // Precision constant for IEEE floating-point numbers
+#define RAN_IEEE_2                 2.220446049250313e-16  // Another precision constant for IEEE floating-point numbers
+#define M_PI                           3.14159265358979323846 // Mathematical constant for π (pi)
 
-#define RAN_RAND_MAX 2147483647
-#define RAN_RNOR_C   1.7155277699214135
-#define RAN_RNOR_R   (1.0 / RAN_RNOR_C)
-#define RAN_IEEE_1   4.656612877414201e-10
-#define RAN_IEEE_2   2.220446049250313e-16
-#define M_PI         3.14159265358979323846   // pi
+// Additional function implementations and definitions will follow this section
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
+// Function to get the current timestamp in milliseconds
 time_t GetTimestamp(void)
 {
-    time_t t = clock();
-    time_t tick = t * 1000 / CLOCKS_PER_SEC;
-    return tick;
-    // return time(NULL);
+    time_t t = clock(); // Retrieve processor time used by the program
+    time_t tick = t * 1000 / CLOCKS_PER_SEC; // Convert clock ticks to milliseconds
+    return tick; // Return the timestamp in milliseconds
+    // Optionally, can also return the current calendar time in seconds with: return time(NULL);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-// 产生高斯随机数
-// 生成高斯分布随机数序列数，期望为μ、方差为σ2=Variance
-// 若随机变量X服从一个数学期望为μ、方差为σ2的正态分布记为N(μ，σ2)
-// 其概率密度函数为正态分布的期望值μ决定了其位置，其标准差σ决定了分布的幅度
-// 当μ = 0,σ = 1时的正态分布是标准正态分布。
+
+// Function to generate a Gaussian random number
+// This function produces a sequence of Gaussian distributed random numbers
+// with a mean (expectation) of μ and a variance of σ² (Variance).
+// If a random variable X follows a normal distribution with expectation μ and variance σ²,
+// it is denoted as N(μ, σ²).
+// The probability density function of the normal distribution is defined by its mean μ,
+// which determines its location, and its standard deviation σ, which determines the spread of the distribution.
+// The standard normal distribution occurs when μ = 0 and σ = 1.
 
 float32_t NeuralNet_GetGaussRandom(float32_t mul, float32_t Variance)
 {
-    return mul + GenerateGaussRandom2() * Variance;
+    return mul + GenerateGaussRandom2() * Variance; // Generate a Gaussian random number adjusted by the mean and variance
 }
+
+// Function to generate Gaussian noise using the Box-Muller transform
+// This function generates Gaussian-distributed random numbers with a specified mean (mu)
+// and standard deviation (sigma). It utilizes the Box-Muller transform for generating
+// two independent standard normally distributed random numbers from uniformly distributed
+// random numbers.
 
 float32_t generateGaussianNoise_Box_Muller(float32_t mu, float32_t sigma)
 {
-    static const float32_t epsilon = DBL_MIN;
-    static const float32_t two_pi = 2.0 * M_PI;
-    static float32_t z0, z1;
-    static uint32_t generate;
-    generate = !generate;
+    static const float32_t epsilon = DBL_MIN;  // Smallest positive float value to avoid division by zero
+    static const float32_t two_pi = 2.0 * M_PI; // Precomputed value of 2π for later calculations
+    static float32_t z0, z1; // Store two generated Gaussian numbers
+    static uint32_t generate; // Flag to alternate between generating two values
+
+    generate = !generate; // Toggle the generate flag
     if (!generate)
-        return z1 * sigma + mu;
-    float32_t u1, u2;
+        return z1 * sigma + mu; // Return the second value if already generated
+
+    float32_t u1, u2; // Variables for uniformly distributed random numbers
     do
     {
+        // Generate two uniform random numbers in the range (0, 1)
         u1 = rand() * (1.0 / RAND_MAX);
         u2 = rand() * (1.0 / RAND_MAX);
     }
-    while (u1 <= epsilon);
+    while (u1 <= epsilon); // Ensure u1 is not zero to avoid log(0)
 
-    float32_t sqrtVal = sqrt(-2.0 * log(u1));
-    z0 = sqrtVal * cos(two_pi * u2);
-    z1 = sqrtVal * sin(two_pi * u2);
+    // Apply the Box-Muller transform to generate two standard normal variables
+    float32_t sqrtVal = sqrt(-2.0 * log(u1)); // Calculate the square root component
+    z0 = sqrtVal * cos(two_pi * u2); // First standard normal variable
+    z1 = sqrtVal * sin(two_pi * u2); // Second standard normal variable
 
-    return z0 * sigma + mu;
+    return z0 * sigma + mu; // Return the Gaussian random number adjusted by mu and sigma
 }
 
-int sign(float32_t x)
-{
-    return (x >= 0) ? 1 : -1;
-}
+// Function to generate Gaussian noise using the Ziggurat algorithm
+// This function generates Gaussian-distributed random numbers with a specified mean (mu)
+// and standard deviation (sigma). The Ziggurat algorithm is a highly efficient method
+// for generating random numbers from a normal distribution.
 
 float32_t generateGaussianNoise_Ziggurat(float32_t mu, float32_t sigma)
 {
-    static uint32_t iu, iv;
-    static float32_t x, y, q;
-    static float32_t u[256], v[256];
-    static uint32_t init = 0;
+    static uint32_t iu, iv; // Static variables for indexing
+    static float32_t x, y, q; // Variables to hold generated values
+    static float32_t u[256], v[256]; // Arrays to store precomputed values for the Ziggurat
+    static uint32_t init = 0; // Initialization flag
 
+    // Initialize the Ziggurat algorithm once
     if (!init)
     {
-        srand(time(NULL));
+        srand(time(NULL)); // Seed the random number generator
 
-        float32_t c, d, e;
-        float32_t f, g;
-        float32_t h;
+        float32_t c, d, e; // Intermediate variables for calculations
+        float32_t f, g; // Variables for final calculations
+        float32_t h; // Uniform random variable
 
-        c = RAN_RNOR_C;
-        d = fabs(c);
+        c = RAN_RNOR_C; // Constant for the algorithm
+        d = fabs(c); // Absolute value of the constant
 
+        // Precompute the Ziggurat values
         while (1)
         {
             do
             {
-                x = 6.283185307179586476925286766559 * rand() / RAN_RAND_MAX;
-                y = 1.0 - RAN_IEEE_1 * (h = rand() / RAN_RAND_MAX);
-                q = h * exp(-0.5 * x * x);
+                // Generate two uniform random variables
+                x = 6.283185307179586476925286766559 * rand() / RAN_RAND_MAX; // Uniformly distributed angle
+                y = 1.0 - RAN_IEEE_1 * (h = rand() / RAN_RAND_MAX); // Uniformly distributed height
+                q = h * exp(-0.5 * x * x); // Calculate the area under the curve
 
+                // Check against thresholds and compute corresponding values
                 if (q <= 0.2891349)
                 {
+                    // Polynomial approximation for low values
                     e = h * ((((((((((((
                                            -0.000200214257568 * h
                                            + 0.000100950558225) * h
@@ -121,6 +162,7 @@ float32_t generateGaussianNoise_Ziggurat(float32_t mu, float32_t sigma)
                     break;
                 }
 
+                // Polynomial approximation for medium values
                 if (q <= 0.67780119)
                 {
                     e = h * (((((((((((((((((
@@ -145,360 +187,522 @@ float32_t generateGaussianNoise_Ziggurat(float32_t mu, float32_t sigma)
                     break;
                 }
 
+                // Check for acceptance by comparing against the Gaussian tail
                 if (x * x + log(h) / d <= -2.0 * log(x))
                 {
-                    e = h;
+                    e = h; // Assign accepted height
                     break;
                 }
             }
-            while (y > q);
+            while (y > q); // Keep looping until a valid sample is found
 
-            f = (x >= 0.0) ? d + x : -d - x;
-            g = exp(0.5 * f * f);
-            u[init] = f * g;
-            v[init] = g * g;
+            // Compute final values to store in the Ziggurat arrays
+            f = (x >= 0.0) ? d + x : -d - x; // Shift value based on sign of x
+            g = exp(0.5 * f * f); // Exponential component
+            u[init] = f * g; // Store computed value in u
+            v[init] = g * g; // Store squared value in v
 
-            init++;
-            if (init >= 256)
-                break;
+            init++; // Increment the initialization index
+            if (init >= 256) // Ensure we do not exceed array bounds
+                break; // Exit if arrays are filled
         }
     }
 
-    init--;
-    if (init < 0)
+    // Generate the Gaussian noise using precomputed values
+    init--; // Decrement the index for retrieving values
+    if (init < 0) // Wrap around if the index is negative
         init = 255;
 
-    x = u[init];
-    y = v[init];
-    q = (init > 0) ? v[init - 1] : v[255];
+    x = u[init]; // Retrieve the current u value
+    y = v[init]; // Retrieve the current v value
+    q = (init > 0) ? v[init - 1] : v[255]; // Get the previous v value or the last one
 
-    float32_t result = RAN_RNOR_R * x / q;
+    float32_t result = RAN_RNOR_R * x / q; // Calculate the final Gaussian value
 
-    return sigma * result + mu;
+    return sigma * result + mu; // Scale and shift the result to the desired distribution
 }
 
+// Function to generate a random floating-point number between 0 and 1
 float32_t GenerateRandomNumber()
 {
-    // 设置随机数种子
-    //srand(time(NULL));
-    // 生成0到RAND_MAX之间的随机整数
-    uint32_t randInt = rand();
-    // 将随机整数映射到-1到1之间的浮点数范围
-    float32_t randFloat = (float32_t)randInt / RAND_MAX; // 将整数归一化到0到1之间
-    // double randomNum = (randFloat * 2.0) - 1.0;     // 将范围映射到-1到1之间
-    return randFloat;
+    // Set the random number seed (commented out)
+    // This line seeds the random number generator with the current time,
+    // which helps ensure different random numbers each time the program runs.
+    // srand(time(NULL));
+
+    // Generate a random integer between 0 and RAND_MAX
+    uint32_t randInt = rand(); // rand() returns a pseudo-random integer
+
+    // Normalize the random integer to a floating-point number between 0 and 1
+    // The result is cast to float32_t to ensure it is a floating-point value.
+    float32_t randFloat = (float32_t)randInt / RAND_MAX; // Normalize to range [0, 1]
+
+    // Return the generated random float
+    return randFloat; // This returns a number in the range [0, 1]
 }
+
 float32_t GenerateGaussRandom(void)
 {
-    float32_t c, u, v, r;
-    static bool return_v = false;
-    static float32_t v_val;
-    c = 0;
-    if (return_v)
+    float32_t c, u, v, r; // Declare local variables
+    static bool return_v = false; // Static variable to track if the previous value should be returned
+    static float32_t v_val; // Store the last generated value
+
+    c = 0; // Initialize c
+    if (return_v) // If we need to return the previously generated value
     {
-        return_v = false;
-        return v_val;
-    }
-#ifdef PLATFORM_STM32
-    u = 2 * random() - 1;
-    v = 2 * random() - 1;
-#else
-    u = 2 * rand() - 1;
-    v = 2 * rand() - 1;
-#endif
-    r = u * u + v * v;
-    if ((r == 0) || (r > 1))
-    {
-        return GenerateGaussRandom();
+        return_v = false; // Reset the flag
+        return v_val; // Return the last generated value
     }
 
 #ifdef PLATFORM_STM32
+    // Generate two random numbers on STM32 platform
+    u = 2 * random() - 1; // Generate a random number in the range [-1, 1]
+    v = 2 * random() - 1;
+#else
+    // Generate random numbers on other platforms
+    u = 2 * rand() - 1; // Generate a random number in the range [-1, 1]
+    v = 2 * rand() - 1;
+#endif
+
+    r = u * u + v * v; // Calculate r
+    if ((r == 0) || (r > 1)) // If r is 0 or greater than 1, regenerate the Gaussian random number
+    {
+        return GenerateGaussRandom(); // Recursive call
+    }
+
+#ifdef PLATFORM_STM32
+    // Calculate c on STM32 platform
     arm_sqrt_f32(-2 * log10(r) / r, &c);
 #else
+    // Calculate c on other platforms
     c = sqrt(-2 * log10(r) / r);
 #endif
-    v_val = v * c;
-    return_v = true;
-    return u * c;
+
+    v_val = v * c; // Calculate v's value
+    return_v = true; // Set the flag to indicate a value will be returned
+    return u * c; // Return the Gaussian random number
 }
 
 float32_t GenerateGaussRandom1(void)
 {
-    static float32_t v1, v2, s;
-    static uint32_t start = 0;
-    float32_t x;
-    if (start == 0)
+    static float32_t v1, v2, s; // Static variables to store intermediate values
+    static uint32_t start = 0; // Flag to alternate between two generated values
+    float32_t x; // Variable to store the generated Gaussian random number
+
+    if (start == 0) // If this is the first call
     {
         do
         {
-            float32_t u1 = (float32_t)rand() / RAND_MAX;
-            float32_t u2 = (float32_t)rand() / RAND_MAX;
+            // Generate two uniform random numbers in the range [0, 1]
+            float32_t u1 = (float32_t)rand() / RAND_MAX; // First uniform random number
+            float32_t u2 = (float32_t)rand() / RAND_MAX; // Second uniform random number
+
+            // Transform uniform random numbers to [-1, 1]
             v1 = 2 * u1 - 1;
             v2 = 2 * u2 - 1;
+
+            // Calculate the sum of squares
             s = v1 * v1 + v2 * v2;
         }
-        while (s >= 1 || s == 0);
+        while (s >= 1 || s == 0); // Continue until we have a valid s
 
+        // Calculate the Gaussian random number using Box-Muller transform
         x = v1 * sqrt(-2 * log(s) / s);
     }
-    else
+    else // If it's the second call
     {
+        // Use the second value to generate a new Gaussian random number
         x = v2 * sqrt(-2 * log(s) / s);
     }
-    start = 1 - start;
-    return x;
+
+    start = 1 - start; // Toggle the start flag to alternate between values
+    return x; // Return the generated Gaussian random number
 }
 
 float32_t GenerateGaussRandom2(void)
 {
-    static float32_t n2 = 0.0;
-    static uint32_t n2_cached = 0;
-    float32_t d;
-    if (!n2_cached)
+    static float32_t n2 = 0.0; // Cached second value of the generated Gaussian random number
+    static uint32_t n2_cached = 0; // Flag to indicate if n2 is cached
+    float32_t d; // Variable to store the calculated distance for Box-Muller transform
+
+    if (!n2_cached) // If n2 is not cached
     {
-        float32_t x, y, r;
+        float32_t x, y, r; // Variables to hold generated points and radius
         do
         {
-            x = 2.0 * rand() / RAND_MAX - 1;
-            y = 2.0 * rand() / RAND_MAX - 1;
+            // Generate two uniform random numbers in the range [-1, 1]
+            x = 2.0 * rand() / RAND_MAX - 1; // First uniform random number
+            y = 2.0 * rand() / RAND_MAX - 1; // Second uniform random number
+
+            // Calculate the radius squared
             r = x * x + y * y;
         }
-        while (r >= 1.0 || r == 0.0);
+        while (r >= 1.0 || r == 0.0); // Continue until we have a valid radius
+
+        // Calculate the distance using Box-Muller transform
 #ifdef PLATFORM_STM32
-        arm_sqrt_f32(-2 * log10(r) / r, &d);
+        arm_sqrt_f32(-2 * log10(r) / r, &d); // Use ARM-specific function for square root
 #else
-        d = sqrt(-2.0 * log(r) / r);
+        d = sqrt(-2.0 * log(r) / r); // Standard square root calculation
 #endif
-        float32_t n1 = x * d;
-        n2 = y * d;
-        n2_cached = 1;
-        return n1;
+
+        float32_t n1 = x * d; // First Gaussian random number
+        n2 = y * d; // Second Gaussian random number (cached for next call)
+        n2_cached = 1; // Mark that n2 has been cached
+        return n1; // Return the first Gaussian random number
     }
-    else
+    else // If n2 is cached
     {
-        n2_cached = 0;
-        return n2;
+        n2_cached = 0; // Reset the cache flag
+        return n2; // Return the cached second Gaussian random number
     }
 }
+
+// Function to determine the sign of a number
+int sign(float32_t x)
+{
+    return (x >= 0) ? 1 : -1; // Return 1 for non-negative, -1 for negative
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary>
-/// 创建张量实体，为张量分配空间
+/// Creates a tensor entity and allocates space for the tensor.
 /// </summary>
-/// <param name="Length"></param>
-/// <returns></returns>
+/// <param name="Length">The length of the tensor to be created.</param>
+/// <returns>A pointer to the created tensor, or NULL if allocation fails.</returns>
 TPTensor MakeTensor(uint32_t Length)
 {
+    // Allocate memory for the tensor structure
     TPTensor tPTensor = malloc(sizeof(TTensor));
-    if (tPTensor != NULL)
+    if (tPTensor != NULL) // Check if memory allocation was successful
     {
-        tPTensor->length = Length;
+        tPTensor->length = Length; // Set the length of the tensor
+        // Allocate memory for the tensor's buffer
         tPTensor->buffer = malloc(tPTensor->length * sizeof(float32_t));
-        if (tPTensor->buffer != NULL)
+        if (tPTensor->buffer != NULL) // Check if buffer allocation was successful
+        {
+            // Initialize the buffer to zero
             memset(tPTensor->buffer, 0, tPTensor->length * sizeof(float32_t));
+        }
     }
-    return tPTensor;
+    return tPTensor; // Return the created tensor
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary>
-/// 初始化张量实体
+/// Initializes a tensor entity by allocating space and setting its dimensions.
 /// </summary>
-/// <param name="PTensor"></param>
-/// <param name="W"></param>
-/// <param name="H"></param>
-/// <param name="Depth"></param>
-/// <param name="Bias"></param>
+/// <param name="PTensor">Pointer to the tensor to initialize.</param>
+/// <param name="W">Width of the tensor.</param>
+/// <param name="H">Height of the tensor.</param>
+/// <param name="Depth">Depth of the tensor.</param>
+/// <param name="Bias">Bias value used for initialization.</param>
 void TensorInit(TPTensor PTensor, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
 {
-    uint32_t n = W * H * Depth;
-    PTensor = MakeTensor(n);
-    TensorFillZero(PTensor);
+    uint32_t n = W * H * Depth; // Calculate the total number of elements in the tensor
+    PTensor = MakeTensor(n); // Allocate memory for the tensor
+    TensorFillZero(PTensor); // Fill the tensor with zeros
 }
 
+/// <summary>
+/// Fills the tensor's buffer with zeros.
+/// </summary>
+/// <param name="PTensor">Pointer to the tensor to fill with zeros.</param>
 void TensorFillZero(TPTensor PTensor)
 {
-    if (PTensor->length > 0)
-        memset(PTensor->buffer, 0, PTensor->length * sizeof(float32_t));
+    if (PTensor->length > 0) // Check if the tensor has a valid length
+        memset(PTensor->buffer, 0, PTensor->length * sizeof(float32_t)); // Set all elements to zero
 }
 
+/// <summary>
+/// Fills the tensor's buffer with a specified bias value.
+/// </summary>
+/// <param name="PTensor">Pointer to the tensor to fill.</param>
+/// <param name="Bias">Value to fill the tensor with.</param>
 void TensorFillWith(TPTensor PTensor, float32_t Bias)
 {
     for (int i = 0; i < PTensor->length; i++)
     {
-        PTensor->buffer[i] = Bias;
+        PTensor->buffer[i] = Bias; // Assign the bias value to each element
     }
 }
 
+/// <summary>
+/// Fills the tensor's buffer with Gaussian random values.
+/// </summary>
+/// <param name="PTensor">Pointer to the tensor to fill with Gaussian noise.</param>
 void TensorFillGauss(TPTensor PTensor)
 {
-    float32_t scale = 0;
+    float32_t scale = 0; // Variable to store the scaling factor
+    // Calculate the scaling factor based on the tensor's length
 #ifdef PLATFORM_STM32
-    arm_sqrt_f32(1.0 / PTensor->length, &scale);
+    arm_sqrt_f32(1.0 / PTensor->length, &scale); // Calculate scale for STM32 platform
 #else
-    scale = sqrt(1.0 / PTensor->length);
+    scale = sqrt(1.0 / PTensor->length); // Calculate scale for other platforms
 #endif
 
     for (int i = 0; i < PTensor->length; i++)
     {
-        float32_t v = NeuralNet_GetGaussRandom(0.00, scale);
-        PTensor->buffer[i] = v;
+        float32_t v = NeuralNet_GetGaussRandom(0.00, scale); // Get a Gaussian random value
+        PTensor->buffer[i] = v; // Assign the random value to the tensor
     }
 }
 
+/// <summary>
+/// Computes the maximum and minimum values from the tensor.
+/// </summary>
+/// <param name="PTensor">Pointer to the tensor from which to find max and min values.</param>
+/// <returns>Pointer to a structure containing the max and min values.</returns>
 TPMaxMin TensorMaxMin(TPTensor PTensor)
 {
-    TPMaxMin pMaxMin = malloc(sizeof(TMaxMin));
-    pMaxMin->max = MINFLOAT_NEGATIVE_NUMBER;
-    pMaxMin->min = MAXFLOAT_POSITIVE_NUMBER;
+    TPMaxMin pMaxMin = malloc(sizeof(TMaxMin)); // Allocate memory for max/min structure
+    pMaxMin->max = MINFLOAT_NEGATIVE_NUMBER; // Initialize max to the smallest possible value
+    pMaxMin->min = MAXFLOAT_POSITIVE_NUMBER; // Initialize min to the largest possible value
+
+    // Iterate through the tensor's buffer to find max and min values
     for (int i = 0; i < PTensor->length; i++)
     {
         if (PTensor->buffer[i] > pMaxMin->max)
-            pMaxMin->max = PTensor->buffer[i];
+            pMaxMin->max = PTensor->buffer[i]; // Update max if the current value is greater
         if (PTensor->buffer[i] < pMaxMin->min)
-            pMaxMin->min = PTensor->buffer[i];
+            pMaxMin->min = PTensor->buffer[i]; // Update min if the current value is smaller
     }
-    return pMaxMin;
+    return pMaxMin; // Return the pointer to the max/min structure
 }
+
+/// <summary>
+/// Frees the memory allocated for the tensor and its buffer.
+/// </summary>
+/// <param name="PTensor">Pointer to the tensor to free.</param>
 void TensorFree(TPTensor PTensor)
 {
-    if (PTensor != NULL)
+    if (PTensor != NULL) // Check if the tensor is not NULL
     {
-        free(PTensor->buffer);
-        PTensor->length = 0;
-        free(PTensor);
-        PTensor = NULL;
+        free(PTensor->buffer); // Free the buffer memory
+        PTensor->length = 0; // Reset length to 0
+        free(PTensor); // Free the tensor structure
+        PTensor = NULL; // Set pointer to NULL to avoid dangling reference
     }
 }
 
+/// <summary>
+/// Saves the tensor's buffer data to a file.
+/// </summary>
+/// <param name="pFile">File pointer to write the tensor data to.</param>
+/// <param name="PTensor">Pointer to the tensor to save.</param>
 void TensorSave(FILE* pFile, TPTensor PTensor)
 {
-    if (pFile == NULL)
+    if (pFile == NULL) // Check if the file pointer is NULL
     {
-        LOG("Error opening file NULL");
-        return;
+        LOG("Error opening file NULL"); // Log an error message
+        return; // Exit the function
     }
+    // Write the tensor's buffer to the file if it's valid
     if (PTensor->buffer != NULL && PTensor->length > 0)
         fwrite(PTensor->buffer, 1, sizeof(float32_t) * PTensor->length, pFile);
 }
 
+/// <summary>
+/// Loads tensor data from a file into the tensor's buffer.
+/// </summary>
+/// <param name="pFile">File pointer to read the tensor data from.</param>
+/// <param name="PTensor">Pointer to the tensor to load data into.</param>
 void TensorLoad(FILE* pFile, TPTensor PTensor)
 {
-    if (pFile == NULL)
+    if (pFile == NULL) // Check if the file pointer is NULL
     {
-        LOG("Error opening file NULL");
-        return;
+        LOG("Error opening file NULL"); // Log an error message
+        return; // Exit the function
     }
+    // Read data from the file into the tensor's buffer if it's valid
     if (PTensor->buffer != NULL && PTensor->length > 0)
         fread(PTensor->buffer, 1, sizeof(float32_t) * PTensor->length, pFile);
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
+
 /// <summary>
-/// 创建体积卷，为体积卷分配空间
+/// Creates a volume and allocates memory for it.
 /// </summary>
-/// <param name="W"></param>
-/// <param name="H"></param>
-/// <param name="Depth"></param>
-/// <returns></returns>
+/// <param name="W">Width of the volume.</param>
+/// <param name="H">Height of the volume.</param>
+/// <param name="Depth">Depth of the volume.</param>
+/// <returns>Pointer to the created volume.</returns>
 TPVolume MakeVolume(uint16_t W, uint16_t H, uint16_t Depth)
 {
-    TPVolume tPVolume = malloc(sizeof(TVolume));
-    if (tPVolume != NULL)
+    TPVolume tPVolume = malloc(sizeof(TVolume)); // Allocate memory for the volume
+    if (tPVolume != NULL) // Check if memory allocation was successful
     {
+        // Set the dimensions of the volume
         tPVolume->_w = W;
         tPVolume->_h = H;
         tPVolume->_depth = Depth;
+
+        // Initialize function pointers for volume operations
         tPVolume->init = VolumeInit;
-        tPVolume->free = TensorFree;
-        tPVolume->fillZero = TensorFillZero;
-        tPVolume->fillGauss = TensorFillGauss;
-        tPVolume->setValue = VolumeSetValue;
-        tPVolume->getValue = VolumeGetValue;
-        tPVolume->addValue = VolumeAddValue;
-        tPVolume->setGradValue = VolumeSetGradValue;
-        tPVolume->getGradValue = VolumeGetGradValue;
-        tPVolume->addGradValue = VolumeAddGradValue;
-        tPVolume->flip = VolumeFlip;
-        tPVolume->print = VolumePrint;
+        tPVolume->free = TensorFree; // Reuse TensorFree for memory cleanup
+        tPVolume->fillZero = TensorFillZero; // Set all values to zero
+        tPVolume->fillGauss = TensorFillGauss; // Fill with Gaussian random values
+        tPVolume->setValue = VolumeSetValue; // Set specific values in the volume
+        tPVolume->getValue = VolumeGetValue; // Get specific values from the volume
+        tPVolume->addValue = VolumeAddValue; // Add values to the volume
+        tPVolume->setGradValue = VolumeSetGradValue; // Set gradient values
+        tPVolume->getGradValue = VolumeGetGradValue; // Get gradient values
+        tPVolume->addGradValue = VolumeAddGradValue; // Add gradient values
+        tPVolume->flip = VolumeFlip; // Flip the volume
+        tPVolume->print = VolumePrint; // Print volume details
     }
-    return tPVolume;
+    return tPVolume; // Return the pointer to the created volume
 }
 
+/// <summary>
+/// Initializes the volume with given dimensions and bias value.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume to initialize.</param>
+/// <param name="W">Width of the volume.</param>
+/// <param name="H">Height of the volume.</param>
+/// <param name="Depth">Depth of the volume.</param>
+/// <param name="Bias">Bias value to initialize the volume's tensors.</param>
 void VolumeInit(TPVolume PVolume, uint16_t W, uint16_t H, uint16_t Depth, float32_t Bias)
 {
-    PVolume->_w = W;
-    PVolume->_h = H;
-    PVolume->_depth = Depth;
-    uint32_t n = PVolume->_w * PVolume->_h * PVolume->_depth;
-    PVolume->weight = MakeTensor(n);
-    PVolume->grads = MakeTensor(n);
-    // TensorFillZero(PVolume->weight);
-    // TensorFillZero(PVolume->weight_grad);
+    PVolume->_w = W; // Set the width
+    PVolume->_h = H; // Set the height
+    PVolume->_depth = Depth; // Set the depth
+
+    uint32_t n = PVolume->_w * PVolume->_h * PVolume->_depth; // Calculate total size
+    PVolume->weight = MakeTensor(n); // Create tensor for weights
+    PVolume->grads = MakeTensor(n); // Create tensor for gradients
+
+    // Initialize the weight and gradient tensors with the bias value
     TensorFillWith(PVolume->weight, Bias);
     TensorFillWith(PVolume->grads, Bias);
 }
 
+/// <summary>
+/// Frees the allocated memory for the volume and its tensors.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume to free.</param>
 void VolumeFree(TPVolume PVolume)
 {
-    if (PVolume != NULL)
+    if (PVolume != NULL) // Check if the volume is not NULL
     {
-        TensorFree(PVolume->weight);
-        TensorFree(PVolume->grads);
-        free(PVolume);
+        TensorFree(PVolume->weight); // Free the weights tensor
+        TensorFree(PVolume->grads); // Free the gradients tensor
+        free(PVolume); // Free the volume structure
     }
-    PVolume = NULL;
+    PVolume = NULL; // Set pointer to NULL to avoid dangling reference
 }
 
+/// <summary>
+/// Sets the value at the specified coordinates in the volume's weight tensor.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
+/// <param name="X">X coordinate.</param>
+/// <param name="Y">Y coordinate.</param>
+/// <param name="Depth">Depth index.</param>
+/// <param name="Value">Value to set.</param>
 void VolumeSetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
 {
+    // Calculate the linear index for the 3D coordinates in the 1D buffer
     uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-    PVolume->weight->buffer[index] = Value;
+    PVolume->weight->buffer[index] = Value; // Set the value at the calculated index
 }
 
+/// <summary>
+/// Adds a value to the existing value at the specified coordinates in the volume's weight tensor.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
+/// <param name="X">X coordinate.</param>
+/// <param name="Y">Y coordinate.</param>
+/// <param name="Depth">Depth index.</param>
+/// <param name="Value">Value to add.</param>
 void VolumeAddValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
 {
+    // Calculate the linear index for the 3D coordinates in the 1D buffer
     uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-    PVolume->weight->buffer[index] = PVolume->weight->buffer[index] + Value;
+    PVolume->weight->buffer[index] = PVolume->weight->buffer[index] + Value; // Add the value to the existing value
 }
 
+/// <summary>
+/// Retrieves the value at the specified coordinates in the volume's weight tensor.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
+/// <param name="X">X coordinate.</param>
+/// <param name="Y">Y coordinate.</param>
+/// <param name="Depth">Depth index.</param>
+/// <returns>The value at the specified coordinates.</returns>
 float32_t VolumeGetValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth)
 {
+    // Calculate the linear index for the 3D coordinates in the 1D buffer
     uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-    return PVolume->weight->buffer[index];
+    return PVolume->weight->buffer[index]; // Return the value at the calculated index
 }
 
+/// <summary>
+/// Sets the gradient value at the specified coordinates in the volume's gradient tensor.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
+/// <param name="X">X coordinate.</param>
+/// <param name="Y">Y coordinate.</param>
+/// <param name="Depth">Depth index.</param>
+/// <param name="Value">Gradient value to set.</param>
 void VolumeSetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
 {
+    // Calculate the linear index for the 3D coordinates in the 1D buffer
     uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-    PVolume->grads->buffer[index] = Value;
+    PVolume->grads->buffer[index] = Value; // Set the gradient value at the calculated index
 }
 
+/// <summary>
+/// Adds a gradient value to the existing gradient value at the specified coordinates in the volume's gradient tensor.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
+/// <param name="X">X coordinate.</param>
+/// <param name="Y">Y coordinate.</param>
+/// <param name="Depth">Depth index.</param>
+/// <param name="Value">Gradient value to add.</param>
 void VolumeAddGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth, float32_t Value)
 {
+    // Calculate the linear index for the 3D coordinates in the 1D buffer
     uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-    PVolume->grads->buffer[index] = PVolume->grads->buffer[index] + Value;
+    PVolume->grads->buffer[index] = PVolume->grads->buffer[index] + Value; // Add the gradient value to the existing gradient value
 }
 
+/// <summary>
+/// Retrieves the gradient value at the specified coordinates in the volume's gradient tensor.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
+/// <param name="X">X coordinate.</param>
+/// <param name="Y">Y coordinate.</param>
+/// <param name="Depth">Depth index.</param>
+/// <returns>The gradient value at the specified coordinates.</returns>
 float32_t VolumeGetGradValue(TPVolume PVolume, uint16_t X, uint16_t Y, uint16_t Depth)
 {
+    // Calculate the linear index for the 3D coordinates in the 1D buffer
     uint32_t index = ((PVolume->_w * Y) + X) * PVolume->_depth + Depth;
-    return PVolume->grads->buffer[index];
+    return PVolume->grads->buffer[index]; // Return the gradient value at the calculated index
 }
 
+/// <summary>
+/// Flips the volume along the width dimension for each depth channel.
+/// </summary>
+/// <param name="PVolume">Pointer to the volume.</param>
 void VolumeFlip(TPVolume PVolume)
 {
-    uint16_t width = PVolume->_w;
-    uint16_t height = PVolume->_h;
-    uint16_t depth = PVolume->_depth;
+    uint16_t width = PVolume->_w;  // Width of the volume
+    uint16_t height = PVolume->_h; // Height of the volume
+    uint16_t depth = PVolume->_depth; // Depth of the volume
 
-    // 逐通道翻转
+    // Flip each channel
     for (uint16_t d = 0; d < depth; d++)
     {
         for (uint16_t y = 0; y < height; y++)
         {
             for (uint16_t x = 0; x < width / 2; x++)
             {
-                // 交换像素位置
+                // Swap pixel positions to flip the volume
                 float32_t temp = PVolume->weight->buffer[y * width * depth + x * depth + d];
                 PVolume->weight->buffer[y * width * depth + x * depth + d] = PVolume->weight->buffer[y * width * depth + (width - x - 1) * depth + d];
                 PVolume->weight->buffer[y * width * depth + (width - x - 1) * depth + d] = temp;
@@ -507,85 +711,116 @@ void VolumeFlip(TPVolume PVolume)
     }
 }
 
+/// <summary>
+/// Creates a set of filters and allocates memory for them.
+/// </summary>
+/// <param name="W">Width of each filter.</param>
+/// <param name="H">Height of each filter.</param>
+/// <param name="Depth">Depth of each filter.</param>
+/// <param name="FilterNumber">Number of filters to create.</param>
+/// <returns>A pointer to the created filters.</returns>
 TPFilters MakeFilters(uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber)
 {
-    TPFilters tPFilters = malloc(sizeof(TFilters));
+    TPFilters tPFilters = malloc(sizeof(TFilters)); // Allocate memory for the filters
     if (tPFilters != NULL)
     {
-        tPFilters->_w = W;
-        tPFilters->_h = H;
-        tPFilters->_depth = Depth;
-        tPFilters->filterNumber = FilterNumber;
-        tPFilters->volumes = malloc(sizeof(TPVolume) * tPFilters->filterNumber);
+        tPFilters->_w = W; // Set width
+        tPFilters->_h = H; // Set height
+        tPFilters->_depth = Depth; // Set depth
+        tPFilters->filterNumber = FilterNumber; // Set the number of filters
+        tPFilters->volumes = malloc(sizeof(TPVolume) * tPFilters->filterNumber); // Allocate memory for filter volumes
         if (tPFilters->volumes == NULL)
         {
             LOGERROR("tPFilters->volumes==NULL! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
-            return NULL;
+            return NULL; // Return NULL if allocation fails
         }
         for (uint16_t i = 0; i < tPFilters->filterNumber; i++)
         {
-            tPFilters->volumes[i] = MakeVolume(tPFilters->_w, tPFilters->_w, tPFilters->_depth);
+            tPFilters->volumes[i] = MakeVolume(tPFilters->_w, tPFilters->_h, tPFilters->_depth); // Create each volume
         }
-        tPFilters->init = VolumeInit;
-        tPFilters->free = FilterVolumesFree;
+        tPFilters->init = VolumeInit; // Assign initialization function
+        tPFilters->free = FilterVolumesFree; // Assign free function
     }
-    return tPFilters;
+    return tPFilters; // Return the created filters
 }
 
+/// <summary>
+/// Resizes the filter set with new dimensions and number of filters.
+/// </summary>
+/// <param name="PFilters">Pointer to the filters.</param>
+/// <param name="W">New width for filters.</param>
+/// <param name="H">New height for filters.</param>
+/// <param name="Depth">New depth for filters.</param>
+/// <param name="FilterNumber">New number of filters.</param>
+/// <returns>True if resizing is successful, false otherwise.</returns>
 bool FiltersResize(TPFilters PFilters, uint16_t W, uint16_t H, uint16_t Depth, uint16_t FilterNumber)
 {
+    // Validate the new dimensions
     if (W <= 0 || H <= 0 || Depth <= 0 || FilterNumber <= 0)
     {
         LOGERROR("Resize Filters failed! W=%d H=%d Depth=%d FilterNumber=%d", W, H, Depth, FilterNumber);
-        return false;
+        return false; // Return false if invalid dimensions
     }
+
     if (PFilters != NULL)
     {
-        PFilters->_w = W;
-        PFilters->_h = H;
-        PFilters->_depth = Depth;
-        PFilters->filterNumber = FilterNumber;
-        PFilters->free(PFilters);
-        PFilters->volumes = malloc(sizeof(TPVolume) * PFilters->filterNumber);
+        PFilters->_w = W; // Update width
+        PFilters->_h = H; // Update height
+        PFilters->_depth = Depth; // Update depth
+        PFilters->filterNumber = FilterNumber; // Update the number of filters
+        PFilters->free(PFilters); // Free existing volumes
+        PFilters->volumes = malloc(sizeof(TPVolume) * PFilters->filterNumber); // Allocate memory for new filter volumes
         for (uint16_t i = 0; i < PFilters->filterNumber; i++)
         {
-            PFilters->volumes[i] = MakeVolume(PFilters->_w, PFilters->_w, PFilters->_depth);
+            PFilters->volumes[i] = MakeVolume(PFilters->_w, PFilters->_h, PFilters->_depth); // Create new volumes
         }
-        PFilters->init = VolumeInit;
-        PFilters->free = FilterVolumesFree;
+        PFilters->init = VolumeInit; // Reassign initialization function
+        PFilters->free = FilterVolumesFree; // Reassign free function
     }
-    return true;
+    return true; // Return true if resizing is successful
 }
 
+/// <summary>
+/// Frees the allocated memory for the filter set and its volumes.
+/// </summary>
+/// <param name="PFilters">Pointer to the filters.</param>
 void FiltersFree(TPFilters PFilters)
 {
     if (PFilters != NULL)
     {
+        // Free each volume in the filter set
         for (uint16_t d = 0; d < PFilters->filterNumber; d++)
         {
             VolumeFree(PFilters->volumes[d]);
         }
-        free(PFilters);
-        PFilters = NULL;
+        free(PFilters); // Free the filter set
+        PFilters = NULL; // Set pointer to NULL
     }
 }
 
+/// <summary>
+/// Frees the memory allocated for the volumes in the filter set.
+/// </summary>
+/// <param name="PFilters">Pointer to the filters.</param>
 void FilterVolumesFree(TPFilters PFilters)
 {
     if (PFilters != NULL)
     {
+        // Free each volume without freeing the filter set itself
         for (uint16_t d = 0; d < PFilters->filterNumber; d++)
         {
             VolumeFree(PFilters->volumes[d]);
         }
-        PFilters->volumes = NULL;
+        PFilters->volumes = NULL; // Set volume pointer to NULL
     }
 }
-/// @brief ////////////////////////////////////////////////////////////
-/// @param PVolume
-/// @param wg 0:weight,1:weight_grad
+
+/// @brief Prints the values or gradients of a volume.
+/// @param PVolume Pointer to the volume to print.
+/// @param wg 0 for weights, 1 for gradients.
 void VolumePrint(TPVolume PVolume, uint8_t wg)
 {
+    // Check if the volume is 1x1 in dimensions
     if (PVolume->_h == 1 && PVolume->_w == 1)
     {
         if (wg == PRINTFLAG_WEIGHT)
@@ -593,11 +828,13 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
         else
             LOGINFOR("grads:PVolume->_depth=%d/%d", PVolume->_depth, PVolume->_depth);
     }
-    float32_t f32 = 0.00;
+
+    float32_t f32 = 0.00; // Initialize value variable
     for (uint16_t d = 0; d < PVolume->_depth; d++)
     {
         if (PVolume->_h == 1 && PVolume->_w == 1)
         {
+            // Print individual depth values
             if (wg == PRINTFLAG_WEIGHT)
             {
                 f32 = PVolume->getValue(PVolume, 0, 0, d);
@@ -611,10 +848,12 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
         }
         else
         {
+            // Print values/gradients for non-1x1 dimensions
             if (wg == PRINTFLAG_WEIGHT)
                 LOGINFOR("weight:PVolume->_depth=%d/%d %dx%d", d, PVolume->_depth, PVolume->_w, PVolume->_h);
             else
                 LOGINFOR("grads:PVolume->_depth=%d/%d %dx%d", d, PVolume->_depth, PVolume->_w, PVolume->_h);
+
             for (uint16_t y = 0; y < PVolume->_h; y++)
             {
                 for (uint16_t x = 0; x < PVolume->_w; x++)
@@ -630,72 +869,96 @@ void VolumePrint(TPVolume PVolume, uint8_t wg)
                         (x == 0) ? LOG(PRINTFLAG_FORMAT, f32) : LOG("," PRINTFLAG_FORMAT, f32);
                     }
                 }
-                LOG("\n");
+                LOG("\n"); // Newline after each row
             }
         }
     }
     if (PVolume->_h == 1 && PVolume->_w == 1)
-        LOG("\n");
+        LOG("\n"); // Newline for 1x1 volume
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////
-/// @brief /////////////////////////////////////////////////////////////////////////////
-/// @param PInputLayer
-/// @param PLayerOption
+
+/// @brief Initializes the input layer with specified options.
+/// @param PInputLayer Pointer to the input layer.
+/// @param PLayerOption Pointer to the layer options.
 void InputLayerInit(TPInputLayer PInputLayer, TPLayerOption PLayerOption)
 {
-    PInputLayer->layer.LayerType = PLayerOption->LayerType;
-    PInputLayer->layer.in_v = NULL;
-    PInputLayer->layer.out_v = NULL;
+    PInputLayer->layer.LayerType = PLayerOption->LayerType; // Set layer type
+    PInputLayer->layer.in_v = NULL; // Initialize input volume to NULL
+    PInputLayer->layer.out_v = NULL; // Initialize output volume to NULL
 
+    // Set input dimensions
     PInputLayer->layer.in_w = PLayerOption->in_w;
     PInputLayer->layer.in_h = PLayerOption->in_h;
     PInputLayer->layer.in_depth = PLayerOption->in_depth;
 
+    // Set output dimensions equal to input dimensions
     PInputLayer->layer.out_w = PLayerOption->out_w = PInputLayer->layer.in_w;
     PInputLayer->layer.out_h = PLayerOption->out_h = PInputLayer->layer.in_h;
     PInputLayer->layer.out_depth = PLayerOption->out_depth = PInputLayer->layer.in_depth;
 }
 
+/// @brief Performs the forward pass for the input layer.
+/// @param PInputLayer Pointer to the input layer.
+/// @param PVolume Pointer to the input volume.
 void InputLayerForward(TPInputLayer PInputLayer, TPVolume PVolume)
 {
     if (PVolume == NULL)
     {
         LOGERROR("%s is null", CNNTypeName[PInputLayer->layer.LayerType]);
-        return;
+        return; // Exit if input volume is NULL
     }
+
+    // Free previous input volume if it exists
     if (PInputLayer->layer.in_v != NULL)
     {
         VolumeFree(PInputLayer->layer.in_v);
     }
+
+    // Update input dimensions
     PInputLayer->layer.in_w = PVolume->_w;
     PInputLayer->layer.in_h = PVolume->_h;
     PInputLayer->layer.in_depth = PVolume->_depth;
-    PInputLayer->layer.in_v = PVolume;
+    PInputLayer->layer.in_v = PVolume; // Set the new input volume
 
+    // Set output dimensions equal to input dimensions
     PInputLayer->layer.out_w = PInputLayer->layer.in_w;
     PInputLayer->layer.out_h = PInputLayer->layer.in_h;
     PInputLayer->layer.out_depth = PInputLayer->layer.in_depth;
-    PInputLayer->layer.out_v = PInputLayer->layer.in_v;
+    PInputLayer->layer.out_v = PInputLayer->layer.in_v; // Output is the same as input
 }
 
+/// @brief Placeholder function for the backward pass of the input layer.
 void InputLayerBackward(TPInputLayer PInputLayer)
 {
+    // Placeholder for future implementation
 }
+
+/// @brief Frees the resources allocated for the input layer.
+/// @param PInputLayer Pointer to the input layer.
 void InputLayerFree(TPInputLayer PInputLayer)
 {
-    VolumeFree(PInputLayer->layer.in_v);
-    VolumeFree(PInputLayer->layer.out_v);
+    VolumeFree(PInputLayer->layer.in_v); // Free input volume
+    VolumeFree(PInputLayer->layer.out_v); // Free output volume
 }
+
+/// @brief Placeholder for matrix multiplication function.
+/// @param PInTenser Pointer to the input tensor.
+/// @param PFilter Pointer to the filter tensor.
+/// @param out Pointer to the output tensor.
 void MatrixMultip(TPTensor PInTenser, TPTensor PFilter, TPTensor out)
 {
+    // Placeholder for future implementation
 }
+
 /////////////////////////////////////////////////////////////////////////////
-/// @brief //////////////////////////////////////////////////////////////////
-/// @param PConvLayer
-/// @param PLayerOption
+// @brief 初始化卷积层
+// @param PConvLayer - 卷积层指针
+// @param PLayerOption - 层选项指针，包含初始化参数
 void ConvolutionLayerInit(TPConvLayer PConvLayer, TPLayerOption PLayerOption)
 {
+    // 设置层类型及基础参数
     PConvLayer->layer.LayerType = PLayerOption->LayerType;
     PConvLayer->l1_decay_rate = PLayerOption->l1_decay_rate;
     PConvLayer->l2_decay_rate = PLayerOption->l2_decay_rate;
@@ -703,52 +966,58 @@ void ConvolutionLayerInit(TPConvLayer PConvLayer, TPLayerOption PLayerOption)
     PConvLayer->padding = PLayerOption->padding;
     PConvLayer->bias = PLayerOption->bias;
 
-    // PConvLayer->filters->_w = PLayerOption->filter_w;
-    // PConvLayer->filters->_h = PLayerOption->filter_h;
-    // PConvLayer->filters->filterNumber = PLayerOption->filter_number;
-    // PConvLayer->filters->_depth = PLayerOption->filter_depth;
-
+    // 设置输入的宽、高和深度（通道数）
     PConvLayer->layer.in_w = PLayerOption->in_w;
     PConvLayer->layer.in_h = PLayerOption->in_h;
-    PConvLayer->layer.in_depth = PLayerOption->in_depth; // PLayerOption->filter_depth
+    PConvLayer->layer.in_depth = PLayerOption->in_depth;
     PConvLayer->layer.in_v = NULL;
 
+    // 处理滤波器的深度和默认值
     if (PLayerOption->filter_depth != PConvLayer->layer.in_depth)
         PLayerOption->filter_depth = PConvLayer->layer.in_depth;
     if (PLayerOption->filter_depth <= 0)
         PLayerOption->filter_depth = 3;
+
+    // 创建滤波器
     PConvLayer->filters = MakeFilters(PLayerOption->filter_w, PLayerOption->filter_h, PLayerOption->filter_depth, PLayerOption->filter_number);
 
+    // 计算输出的宽度、高度和深度
     PConvLayer->layer.out_w = floor((PConvLayer->layer.in_w + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
     PConvLayer->layer.out_h = floor((PConvLayer->layer.in_h + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
     PConvLayer->layer.out_depth = PConvLayer->filters->filterNumber;
 
+    // 创建输出体积并初始化
     PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
     PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
 
+    // 初始化偏置
     PConvLayer->biases = MakeVolume(1, 1, PConvLayer->layer.out_depth);
     PConvLayer->biases->init(PConvLayer->biases, 1, 1, PConvLayer->layer.out_depth, PConvLayer->bias);
 
+    // 初始化每个滤波器，并使用高斯分布填充权重
     for (uint16_t i = 0; i < PConvLayer->layer.out_depth; i++)
     {
         PConvLayer->filters->init(PConvLayer->filters->volumes[i], PConvLayer->filters->_w, PConvLayer->filters->_h, PConvLayer->filters->_depth, 0);
         PConvLayer->filters->volumes[i]->fillGauss(PConvLayer->filters->volumes[i]->weight);
-        // ConvLayer.filters->volumes[i]->fillGauss(ConvLayer.filters->volumes[i]->weight_grad);
     }
 
+    // 更新输出的宽度、高度和深度
     PLayerOption->out_w = PConvLayer->layer.out_w;
     PLayerOption->out_h = PConvLayer->layer.out_h;
     PLayerOption->out_depth = PConvLayer->layer.out_depth;
 }
-/// @brief //////////////////////////////////////////////////////////////////////////
-/// @brief //////////////////////////////////////////////////////////////////////////
-/// @param PConvLayer
+
+/////////////////////////////////////////////////////////////////////////////
+// @brief 重新计算卷积层的输出大小
+// @param PConvLayer - 卷积层指针
 void convolutionLayerOutResize(TPConvLayer PConvLayer)
 {
+    // 计算新的输出宽度、高度和滤波器深度
     uint16_t out_w = floor((PConvLayer->layer.in_w + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
     uint16_t out_h = floor((PConvLayer->layer.in_h + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
     uint16_t filter_depth = PConvLayer->layer.in_depth;
 
+    // 如果滤波器的深度变化，重新调整滤波器
     if (PConvLayer->filters->_depth != filter_depth)
     {
         LOGINFOR("ConvLayer resize filters from %d x %d x%d to %d x %d x %d", PConvLayer->filters->_w, PConvLayer->filters->_h, PConvLayer->filters->_depth, out_w, out_h, filter_depth);
@@ -757,6 +1026,8 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
         if (!ret)
             LOGERROR("Resize Filters failed! W=%d H=%d Depth=%d FilterNumber=%d", PConvLayer->filters->_w, PConvLayer->filters->_h, filter_depth, PConvLayer->filters->filterNumber);
     }
+
+    // 如果输出尺寸发生变化，重新初始化输出体积
     if (PConvLayer->layer.out_w != out_w || PConvLayer->layer.out_h != out_h)
     {
         LOGINFOR("ConvLayer resize out_v from %d x %d to %d x %d", PConvLayer->layer.out_w, PConvLayer->layer.out_h, out_w, out_h);
@@ -767,14 +1038,17 @@ void convolutionLayerOutResize(TPConvLayer PConvLayer)
         {
             VolumeFree(PConvLayer->layer.out_v);
         }
+
+        // 创建新的输出体积并初始化
         PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
         PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
     }
 }
-/// @brief //////////////////////////////////////////////////////////////////////////
-/// @param PConvLayer
-/// 单通道多卷积核卷积运算
-/// 多通道卷积
+
+/////////////////////////////////////////////////////////////////////////////
+// @brief 卷积层的前向运算
+// @param PConvLayer - 卷积层指针
+// 该函数实现了多通道卷积运算，将输入卷积为输出
 void ConvolutionLayerForward(TPConvLayer PConvLayer)
 {
     uint16_t padding_x = -PConvLayer->padding;
@@ -783,19 +1057,26 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
     TPVolume outVolume = PConvLayer->layer.out_v;
     uint16_t in_x, in_y;
     float32_t sum = 0.00;
+
+    // 调整输出尺寸
     convolutionLayerOutResize(PConvLayer);
-    // for (uint16_t out_d = 0; out_d < PConvLayer->filters->_depth; out_d++)
+
+    // 遍历输出的每个深度
     for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
     {
         TPVolume filter = PConvLayer->filters->volumes[out_d];
         padding_x = -PConvLayer->padding;
         padding_y = -PConvLayer->padding;
+
+        // 遍历输出的每个像素
         for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
         {
             padding_x = -PConvLayer->padding;
             for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
             {
                 sum = 0.00;
+
+                // 进行滤波器的卷积操作
                 for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
                 {
                     in_y = filter_y + padding_y;
@@ -810,26 +1091,35 @@ void ConvolutionLayerForward(TPConvLayer PConvLayer)
 
                         uint32_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
                         uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
-                        for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)//多通道卷积
+
+                        // 遍历滤波器的每个深度（多通道卷积）
+                        for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
                         {
-                            // sum = sum + filter->getValue(filter, filter_x, filter_y, filter_d) * inVolume->getValue(inVolume, in_x, in_y, filter_d);
-                            sum = sum + filter->weight->buffer[fx + filter_d] * inVolume->weight->buffer[ix + filter_d];
+                            sum += filter->weight->buffer[fx + filter_d] * inVolume->weight->buffer[ix + filter_d];
                         }
                     }
                 }
-                sum = sum + PConvLayer->biases->weight->buffer[out_d];
+
+                // 加上偏置
+                sum += PConvLayer->biases->weight->buffer[out_d];
+
+                // 将卷积结果存入输出体积
                 uint32_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
                 outVolume->weight->buffer[out_idx] = sum;
-                padding_x = padding_x + PConvLayer->stride;
+                padding_x += PConvLayer->stride;
             }
-            padding_y = padding_y + PConvLayer->stride;
+            padding_y += PConvLayer->stride;
         }
     }
 }
 
-
+/////////////////////////////////////////////////////////////////////////////
+// @brief 初始化深度卷积和逐点卷积层
+// @param PConvLayer - 卷积层指针
+// @param PLayerOption - 层选项指针，包含初始化参数
 void DepthwisePointwiseConvolutionInit(TPConvLayer PConvLayer, TPLayerOption PLayerOption)
 {
+    // 初始化基础参数
     PConvLayer->layer.LayerType = PLayerOption->LayerType;
     PConvLayer->l1_decay_rate = PLayerOption->l1_decay_rate;
     PConvLayer->l2_decay_rate = PLayerOption->l2_decay_rate;
@@ -837,78 +1127,90 @@ void DepthwisePointwiseConvolutionInit(TPConvLayer PConvLayer, TPLayerOption PLa
     PConvLayer->padding = PLayerOption->padding;
     PConvLayer->bias = PLayerOption->bias;
 
+    // 设置输入的宽度、高度和深度
     PConvLayer->layer.in_w = PLayerOption->in_w;
     PConvLayer->layer.in_h = PLayerOption->in_h;
-    PConvLayer->layer.in_depth = PLayerOption->in_depth; // PLayerOption->filter_depth
+    PConvLayer->layer.in_depth = PLayerOption->in_depth; // 输入的深度等于滤波器的深度
     PConvLayer->layer.in_v = NULL;
 
+    // 确保滤波器深度与输入深度一致
     if (PLayerOption->filter_depth != PConvLayer->layer.in_depth)
         PLayerOption->filter_depth = PConvLayer->layer.in_depth;
     if (PLayerOption->filter_depth <= 0)
         PLayerOption->filter_depth = 3;
 
+    // 设置滤波器的数量为2：一个用于深度卷积，一个用于逐点卷积
     PLayerOption->filter_number = 2;
     PConvLayer->filters = MakeFilters(PLayerOption->filter_w, PLayerOption->filter_h, PLayerOption->filter_depth, PLayerOption->filter_number);
 
+    // 计算输出的宽度、高度和深度
     PConvLayer->layer.out_w = floor((PConvLayer->layer.in_w + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
     PConvLayer->layer.out_h = floor((PConvLayer->layer.in_h + PConvLayer->padding * 2 - PConvLayer->filters->_w) / PConvLayer->stride + 1);
-    PConvLayer->layer.out_depth = PConvLayer->layer.in_depth;// PConvLayer->filters->filterNumber;
+    PConvLayer->layer.out_depth = PConvLayer->layer.in_depth; // 输出深度与输入深度一致
 
+    // 初始化输出体积
     PConvLayer->layer.out_v = MakeVolume(PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth);
     PConvLayer->layer.out_v->init(PConvLayer->layer.out_v, PConvLayer->layer.out_w, PConvLayer->layer.out_h, PConvLayer->layer.out_depth, 0);
 
+    // 初始化偏置
     PConvLayer->biases = MakeVolume(1, 1, PConvLayer->layer.out_depth);
     PConvLayer->biases->init(PConvLayer->biases, 1, 1, PConvLayer->layer.out_depth, PConvLayer->bias);
 
+    // 初始化滤波器权重
     for (uint32_t i = 0; i < PConvLayer->layer.out_depth; i++)
     {
         PConvLayer->filters->init(PConvLayer->filters->volumes[i], PConvLayer->filters->_w, PConvLayer->filters->_h, PConvLayer->filters->_depth, 0);
         PConvLayer->filters->volumes[i]->fillGauss(PConvLayer->filters->volumes[i]->weight);
-        // ConvLayer.filters->volumes[i]->fillGauss(ConvLayer.filters->volumes[i]->weight_grad);
     }
 
+    // 更新输出的宽度、高度和深度参数
     PLayerOption->out_w = PConvLayer->layer.out_w;
     PLayerOption->out_h = PConvLayer->layer.out_h;
     PLayerOption->out_depth = PConvLayer->layer.out_depth;
 }
+
+/////////////////////////////////////////////////////////////////////////////
+// @brief 深度卷积和逐点卷积的前向计算
+// @param PConvLayer - 卷积层指针
 void DepthwisePointwiseConvolution(TPConvLayer PConvLayer)
 {
     uint16_t padding_x = -PConvLayer->padding;
     uint16_t padding_y = -PConvLayer->padding;
-    TPVolume inVolume = PConvLayer->layer.in_v;
-    TPVolume outVolume = PConvLayer->layer.out_v;
-    // Depthwise convolution
+    TPVolume inVolume = PConvLayer->layer.in_v; // 输入体积
+    TPVolume outVolume = PConvLayer->layer.out_v; // 输出体积
+
+    // 深度卷积滤波器
     TPVolume depthwiseFilter = PConvLayer->filters->volumes[0];
-    // Pointwise convolution
+    // 逐点卷积滤波器
     TPVolume pointwiseFilter = PConvLayer->filters->volumes[1];
 
+    // 深度卷积的运算
     for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
     {
         for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
         {
             padding_x = -PConvLayer->padding;
-
             for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
             {
-                float32_t sum = 0.0;
+                float32_t sum = 0.0; // 用于存储卷积结果
 
+                // 深度卷积：遍历滤波器的每一行和每一列
                 for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
                 {
                     uint32_t in_y = filter_y + padding_y;
-
                     if (in_y < 0 || in_y >= inVolume->_h)
                         continue;
 
                     for (uint16_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
                     {
                         uint32_t in_x = filter_x + padding_x;
-
                         if (in_x < 0 || in_x >= inVolume->_w)
                             continue;
 
                         uint32_t fx = (depthwiseFilter->_w * filter_y + filter_x) * depthwiseFilter->_depth;
                         uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
 
+                        // 按深度进行逐元素乘积计算
                         for (uint32_t filter_d = 0; filter_d < depthwiseFilter->_depth; filter_d++)
                         {
                             sum += depthwiseFilter->weight->buffer[fx + filter_d] * inVolume->weight->buffer[ix + filter_d];
@@ -916,6 +1218,7 @@ void DepthwisePointwiseConvolution(TPConvLayer PConvLayer)
                     }
                 }
 
+                // 将卷积结果存入输出体积
                 uint32_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
                 outVolume->weight->buffer[out_idx] = sum;
 
@@ -926,8 +1229,7 @@ void DepthwisePointwiseConvolution(TPConvLayer PConvLayer)
         }
     }
 
-
-
+    // 逐点卷积的运算
     for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
     {
         for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
@@ -935,117 +1237,157 @@ void DepthwisePointwiseConvolution(TPConvLayer PConvLayer)
             for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
             {
                 uint32_t out_idx = (outVolume->_w * out_y + out_x) * outVolume->_depth + out_d;
-                float32_t depthwise_out = outVolume->weight->buffer[out_idx];
-                float32_t pointwise_out = depthwise_out * pointwiseFilter->weight->buffer[out_d];
-                outVolume->weight->buffer[out_idx] = pointwise_out;
+                float32_t depthwise_out = outVolume->weight->buffer[out_idx]; // 深度卷积的输出
+                float32_t pointwise_out = depthwise_out * pointwiseFilter->weight->buffer[out_d]; // 逐点卷积运算
+                outVolume->weight->buffer[out_idx] = pointwise_out; // 更新输出体积
             }
         }
     }
 }
 
-/// @brief ////////////////////////////////////////////////////////////////////////////////
-/// @param PConvLayer
-/// Y = WX + B 求关于X W B的偏导数
+/// @brief 反向传播，计算关于输入 X、权重 W、偏置 B 的梯度
+/// @param PConvLayer - 卷积层指针
+/// Y = WX + B，求关于 X、W、B 的偏导数
 void ConvolutionLayerBackward(TPConvLayer PConvLayer)
 {
-    float32_t out_grad = 0.00;
-    uint16_t padding_x = -PConvLayer->padding;
-    uint16_t padding_y = -PConvLayer->padding;
-    uint16_t in_x, in_y;
-    TPVolume inVolume = PConvLayer->layer.in_v;
-    TPVolume outVolume = PConvLayer->layer.out_v;
+    float32_t out_grad = 0.00; // 输出梯度的初始值
+    uint16_t padding_x = -PConvLayer->padding; // 水平方向的填充
+    uint16_t padding_y = -PConvLayer->padding; // 垂直方向的填充
+    uint16_t in_x, in_y; // 输入特征图的坐标
+    TPVolume inVolume = PConvLayer->layer.in_v; // 输入特征图
+    TPVolume outVolume = PConvLayer->layer.out_v; // 输出特征图
+
+    // 初始化输入特征图的梯度为零
     inVolume->fillZero(inVolume->grads);
 
+    // 遍历输出特征图的每个深度通道
     for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
     {
-        TPVolume filter = PConvLayer->filters->volumes[out_d];
-        padding_x = -PConvLayer->padding;
-        padding_y = -PConvLayer->padding;
+        TPVolume filter = PConvLayer->filters->volumes[out_d]; // 获取当前深度对应的滤波器
+        padding_x = -PConvLayer->padding; // 重置水平方向的填充
+        padding_y = -PConvLayer->padding; // 重置垂直方向的填充
+
+        // 遍历输出特征图的每个位置
         for (uint32_t out_y = 0; out_y < PConvLayer->layer.out_h; out_y++)
         {
             padding_x = -PConvLayer->padding;
             for (uint32_t out_x = 0; out_x < PConvLayer->layer.out_w; out_x++)
             {
+                // 获取当前输出位置的梯度
                 out_grad = outVolume->getGradValue(outVolume, out_x, out_y, out_d);
+
+                // 遍历滤波器的每个位置，计算梯度
                 for (uint32_t filter_y = 0; filter_y < PConvLayer->filters->_h; filter_y++)
                 {
-                    in_y = filter_y + padding_y;
+                    in_y = filter_y + padding_y; // 计算输入特征图中对应的 y 坐标
                     if (in_y < 0 || in_y >= inVolume->_h)
-                        continue;
+                        continue; // 如果超出边界则跳过
 
                     for (uint32_t filter_x = 0; filter_x < PConvLayer->filters->_w; filter_x++)
                     {
-                        in_x = filter_x + padding_x;
+                        in_x = filter_x + padding_x; // 计算输入特征图中对应的 x 坐标
                         if (in_x < 0 || in_x >= inVolume->_w)
-                            continue;
+                            continue; // 如果超出边界则跳过
 
+                        // 计算当前滤波器和输入特征图的索引
                         uint32_t fx = (filter->_w * filter_y + filter_x) * filter->_depth;
                         uint32_t ix = (inVolume->_w * in_y + in_x) * inVolume->_depth;
+
+                        // 计算滤波器的梯度和输入特征图的梯度
                         for (uint32_t filter_d = 0; filter_d < PConvLayer->filters->_depth; filter_d++)
                         {
-                            filter->grads->buffer[fx + filter_d] = filter->grads->buffer[fx + filter_d] + inVolume->weight->buffer[ix + filter_d] * out_grad;
-                            inVolume->grads->buffer[ix + filter_d] = inVolume->grads->buffer[ix + filter_d] + filter->weight->buffer[fx + filter_d] * out_grad;
+                            // 更新滤波器的梯度
+                            filter->grads->buffer[fx + filter_d] += inVolume->weight->buffer[ix + filter_d] * out_grad;
+                            // 更新输入特征图的梯度
+                            inVolume->grads->buffer[ix + filter_d] += filter->weight->buffer[fx + filter_d] * out_grad;
                         }
                     }
                 }
-                PConvLayer->biases->grads->buffer[out_d] = PConvLayer->biases->grads->buffer[out_d] + out_grad;
-                padding_x = padding_x + PConvLayer->stride;
+
+                // 更新偏置的梯度
+                PConvLayer->biases->grads->buffer[out_d] += out_grad;
+
+                // 更新水平方向的填充
+                padding_x += PConvLayer->stride;
             }
-            padding_y = padding_y + PConvLayer->stride;
+
+            // 更新垂直方向的填充
+            padding_y += PConvLayer->stride;
         }
     }
 }
 
+/// @brief 获取卷积层的参数和梯度
+/// @param PConvLayer - 卷积层指针
+/// @return 包含参数和梯度的数组
 TPParameters* ConvolutionLayerGetParamsAndGradients(TPConvLayer PConvLayer)
 {
+    // 如果输出通道数小于等于 0，返回 NULL
     if (PConvLayer->layer.out_depth <= 0)
         return NULL;
+
+    // 为每个输出通道及偏置分配内存存储参数和梯度
     TPParameters* tPResponses = malloc(sizeof(TPParameters) * (PConvLayer->layer.out_depth + 1));
     if (tPResponses == NULL)
         return NULL;
+
+    // 遍历每个输出通道，获取滤波器的权重和梯度
     for (uint32_t out_d = 0; out_d < PConvLayer->layer.out_depth; out_d++)
     {
         TPParameters PResponse = malloc(sizeof(TParameters));
         if (PResponse != NULL)
         {
+            // 获取该通道的滤波器权重和梯度
             PResponse->filterWeight = PConvLayer->filters->volumes[out_d]->weight;
             PResponse->filterGrads = PConvLayer->filters->volumes[out_d]->grads;
-            PResponse->l1_decay_rate = PConvLayer->l1_decay_rate;
-            PResponse->l2_decay_rate = PConvLayer->l2_decay_rate;
-            PResponse->fillZero = TensorFillZero;
-            PResponse->free = TensorFree;
+            PResponse->l1_decay_rate = PConvLayer->l1_decay_rate; // L1正则化系数
+            PResponse->l2_decay_rate = PConvLayer->l2_decay_rate; // L2正则化系数
+            PResponse->fillZero = TensorFillZero; // 初始化函数
+            PResponse->free = TensorFree; // 释放函数
             tPResponses[out_d] = PResponse;
         }
     }
 
+    // 获取偏置的权重和梯度，并分配内存
     TPParameters PResponse = malloc(sizeof(TParameters));
     if (PResponse != NULL)
     {
         PResponse->filterWeight = PConvLayer->biases->weight;
         PResponse->filterGrads = PConvLayer->biases->grads;
-        PResponse->l1_decay_rate = 0;
+        PResponse->l1_decay_rate = 0; // 偏置没有正则化
         PResponse->l2_decay_rate = 0;
         PResponse->fillZero = TensorFillZero;
         PResponse->free = TensorFree;
-        tPResponses[PConvLayer->layer.out_depth] = PResponse;
+        tPResponses[PConvLayer->layer.out_depth] = PResponse; // 将偏置存储在数组的最后一个位置
     }
-    return tPResponses;
+
+    return tPResponses; // 返回包含参数和梯度的数组
 }
 
+/// @brief 计算卷积层的反向传播损失
+/// @param PConvLayer - 卷积层指针
+/// @param Y - 目标值
+/// @return 损失值
 float32_t ConvolutionLayerBackwardLoss(TPConvLayer PConvLayer, int Y)
 {
-    return 0.00;
+    return 0.00; // 该函数暂未实现，返回 0.00
 }
 
+/// @brief 释放卷积层相关的内存
+/// @param PConvLayer - 卷积层指针
 void ConvolutionLayerFree(TPConvLayer PConvLayer)
 {
+    // 释放输入、输出、偏置和滤波器的内存
     VolumeFree(PConvLayer->layer.in_v);
     VolumeFree(PConvLayer->layer.out_v);
     VolumeFree(PConvLayer->biases);
     FiltersFree(PConvLayer->filters);
 
+    // 释放滤波器结构体的内存
     if (PConvLayer->filters != NULL)
         free(PConvLayer->filters);
+
+    // 最后释放卷积层本身的内存
     free(PConvLayer);
 }
 
